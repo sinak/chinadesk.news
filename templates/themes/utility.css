@@ -127,3 +127,59 @@ footer{margin-top:1.3rem;font-size:.8rem;color:var(--ink-3);line-height:1.6;
   .t2 .hl h3{font-size:1rem}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* --- daily brief, two columns -------------------------------------------
+   Only applied when a brief is present: the class is set on .wrap by the
+   template, so archive day pages and any brief-dropped build keep the narrow
+   single-column measure they were designed for.
+
+   The brief gets the wider column because it is prose and prose needs a
+   measure; the river keeps its summaries and More dropdown, because most
+   readers will not click through to a Chinese-language source and the bullets
+   are the substance rather than a detail view. */
+.has-brief{max-width:82rem}
+.cols{display:grid;gap:2.4rem;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);
+  align-items:start}
+.briefcol,.rivercol{min-width:0}
+.railhead{font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink-3);border-bottom:2px solid var(--ink);padding-bottom:.3rem;margin:0 0 .7rem}
+.doc{font-size:1rem;line-height:1.62;color:var(--ink-2);max-width:40rem}
+.doc h1{font-size:1.72rem;line-height:1.2;color:var(--ink);letter-spacing:-.02em;
+  margin:0 0 .7rem;font-weight:700}
+.doc h2{font-size:.74rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--accent);border-bottom:1px solid var(--rule);padding-bottom:.25rem;
+  margin:1.7rem 0 .7rem}
+.doc p{margin:0 0 .9rem}
+.doc strong{color:var(--ink);font-weight:700}
+.doc a{color:var(--seal)}
+.doc ul{margin:0 0 .9rem;padding-left:1.2rem}
+.doc li{margin:0 0 .4rem}
+
+/* The river's type scale was set for a full-width column. Inside the split it
+   sits in roughly half the measure, where the same sizes wrap to three lines
+   and out-shout the brief beside them — the eye goes right when the brief is
+   the thing meant to lead. Step the tiers down so the columns read in the
+   right order; the river is still scannable, just no longer the loudest thing
+   on the page. */
+.has-brief .t1 .hl h3{font-size:1.16rem;line-height:1.26}
+.has-brief .t2 .hl h3{font-size:1rem}
+.has-brief .t3 .hl h3{font-size:.92rem}
+.has-brief .t1 .sum{font-size:.92rem}
+.has-brief .sum{font-size:.88rem;line-height:1.42}
+.has-brief .story{padding:.62rem 0}
+
+/* Below the split there is only one column, so the river is on its own again
+   and gets its full-width scale back. */
+@media (max-width:940px){
+  .has-brief .t1 .hl h3{font-size:1.22rem}
+  .has-brief .t2 .hl h3{font-size:1rem}
+  .has-brief .sum{font-size:.94rem}
+}
+
+/* One column below the split. The brief leads because it is the thing that is
+   written once a day and worth reading top to bottom; the river follows. */
+@media (max-width:940px){
+  .has-brief{max-width:50rem}
+  .cols{grid-template-columns:1fr;gap:1.8rem}
+  .doc{max-width:none}
+}

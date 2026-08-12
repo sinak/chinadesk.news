@@ -24,6 +24,13 @@ fx:
 # uncapped — catching up on a missed day is a different job from skimming today.
 max_stories: 34
 
+# The daily brief. Generated once per UTC day and read back from the published
+# site on later builds, so the four-hourly cadence costs one model call a day.
+# Set enabled: false to publish the story list alone.
+brief:
+  enabled: true
+
+
 # Soft ceiling on any one section's share of the front page. The prompt asks for
 # balance, but prompt-level quotas have not held here (lead_restraint missed its
 # cap in every variant), so this enforces it. Applied only while trimming: an AI

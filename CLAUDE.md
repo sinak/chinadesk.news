@@ -45,12 +45,46 @@ same thing is dropped outright (see `omit` in the ranking prompt).
     src/rank.py           one batched model call via OpenRouter: translate, summarize,
                           cluster, score (deterministic heuristic fallback, no API key)
     src/translate.py      rewrites zh links to the translate.goog proxy
+    src/brief.py          the daily brief: one long prose call (Opus 5 xhigh) that
+                          reads the whole feed plus its own recent briefs and
+                          argues rather than summarises. Generated once per UTC
+                          day and read back from the published site thereafter.
     src/build.py          orchestrates, renders Jinja2, writes dist/
     templates/            index.html.j2 — all CSS inline, no JS, no build step
     src/archive.py        rolling 7-day store; reads back the last published day
                           files so history survives CI's clean checkout
     dist/                 index.html, feed.xml, d/YYYY-MM-DD.html (day pages),
-                          data/YYYY-MM-DD.json (the store), latest.json
+                          data/YYYY-MM-DD.json (the store), brief/YYYY-MM-DD.md,
+                          latest.json
+
+## The daily brief
+
+The front page is two columns: the brief on the left, the story river on the
+right. Three things about it are load-bearing.
+
+**It is generated once per UTC day, not once per build.** The site rebuilds every
+four hours; the brief costs roughly $2 a run on Opus. `brief.ensure()` looks for
+today's brief locally, then on the live site, and only calls the model if neither
+has it — so the day costs one call, not six. Publishing `dist/brief/<day>.md` is
+what makes the read-back work, exactly as `archive.py` does for the story store.
+Never make the brief regenerate per build without reworking the cost model.
+
+**A bad brief costs the brief, not the site.** `checks.check_brief()` is
+deliberately outside `checks.run()`. If the brief fails, `build.py` drops it and
+publishes the story list alone — a page without a brief is a valid page. The
+drop is printed loudly; it must never become silent.
+
+**The brief is the one place on the page that opts out of autoescaping.** It has
+to, or its own bold and links would render as literal markup. `brief_to_html()`
+is therefore the trust boundary: it neutralises `<` and `>` before Markdown
+conversion, because Python-Markdown passes raw HTML through by design and the
+brief is model prose written from scraped pages. Do not replace it with a bare
+`markdown.markdown()` call.
+
+Carrying history matters — a brief that cannot say "the tightening we flagged
+Tuesday" is just a longer front page. But carrying too *much* of it invites the
+model to imitate its own voice, so only the last two days go in whole and older
+ones are reduced to headline plus threads.
 
 Run it: `OPENROUTER_API_KEY=... python -m src.build --out dist`
 Options: `--window 26` (hours of history), `--config path`

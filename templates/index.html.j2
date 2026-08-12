@@ -23,7 +23,7 @@
 </style>
 </head>
 <body>
-<div class="wrap">
+<div class="wrap{% if brief %} has-brief{% endif %}">
 
 {% if day_tabs and day_tabs|length > 1 %}
 <nav class="days" aria-label="Archive">
@@ -42,6 +42,16 @@
     {% if archive_day %}<span>archived day</span>{% else %}<span>{{ ok_feeds }}/{{ all_feeds }} sources</span>{% endif %}
   </span>
 </header>
+
+{% if brief %}
+<div class="cols">
+<div class="briefcol">
+  <p class="railhead">Today's brief</p>
+  <div class="doc">{{ brief|safe }}</div>
+</div>
+<div class="rivercol">
+  <p class="railhead">The river · {{ total }}</p>
+{% endif %}
 
 <main>
 {% for c in clusters %}
@@ -97,6 +107,10 @@
 </article>
 {% endfor %}
 </main>
+{% if brief %}
+</div>
+</div>
+{% endif %}
 
 {% if ledger %}
 <div class="ledger">
@@ -118,9 +132,10 @@
 {% endif %}
 
 <footer>
-  Built {{ built_iso }} · next run within the hour ·
+  Built {{ built_iso }} · rebuilds every four hours ·
   Stories link to the original source; Chinese-language sources open in Chinese.
   Headlines and summaries are machine-generated from source material — verify before relying on them.
+  <br>A side project maintained by <a href="https://x.com/sinak" rel="noopener me">@sinak</a>.
 </footer>
 
 </div>

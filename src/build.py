@@ -13,14 +13,35 @@ from email.utils import format_datetime
 from pathlib import Path
 from types import SimpleNamespace
 
+import markdown
 import yaml
 from jinja2 import Environment, FileSystemLoader
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from src import archive, checks, fetch, rank, translate  # noqa: E402
+from src import archive, brief, checks, fetch, rank, translate  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 SITE_NAME = "China Desk"
+
+
+def brief_to_html(md_text: str) -> str:
+    """Markdown -> HTML for the daily brief, with tag injection defused first.
+
+    The template renders this with `|safe`, which is the one place on the page
+    that opts out of autoescaping — it has to, or the brief's own bold, links
+    and lists would render as literal angle brackets. That makes this function
+    the trust boundary.
+
+    Python-Markdown passes raw HTML through untouched by design, and the brief
+    is model prose written from scraped Chinese articles, so a crafted source
+    page is a plausible route to `<script>` on the site. Neutralising `<` and
+    `>` before conversion means Markdown can still build tags from its own
+    syntax (`**`, `[](...)`, `-`), while any literal tag in the model's output
+    renders as visible text instead of markup. `&` is deliberately left alone:
+    escaping it here would double-encode query strings in link URLs.
+    """
+    escaped = md_text.replace("<", "&lt;").replace(">", "&gt;")
+    return markdown.markdown(escaped, extensions=["extra"])
 
 
 def humanize_age(published_iso: str, now: datetime) -> str:
@@ -206,6 +227,28 @@ def main() -> int:
         except ValueError:
             it.pub_rfc822 = format_datetime(now)
 
+    # The daily brief. Generated at most once per UTC day and read back from the
+    # published site on every later build, so the four-hourly cadence costs one
+    # model call a day rather than six. Gated on its own: the story list does not
+    # depend on it, so a brief that fails its checks is dropped and the site
+    # publishes without it rather than not publishing at all. That is a
+    # degradation, so it is reported loudly — never silently.
+    brief_html = None
+    if config.get("brief", {}).get("enabled", True):
+        brief_md, brief_status = brief.ensure(
+            ROOT / args.out, site_url_early, now, args.window, config, items)
+        print(f"[build] brief: {brief_status}")
+        if brief_md:
+            bres = checks.check_brief(brief_md)
+            bok, bsummary = checks.report(bres)
+            print(f"[build] brief preflight:\n{bsummary}")
+            if bok:
+                brief_html = brief_to_html(brief_md)
+            else:
+                bad = ", ".join(r.name for r in bres if not r.ok and r.blocking)
+                print(f"[build] BRIEF DROPPED ({bad}) — publishing the story "
+                      f"list without it", file=sys.stderr)
+
     env = Environment(
         loader=FileSystemLoader(ROOT / "templates"),
         # Unconditional, NOT select_autoescape(["html"]) — that matches on the
@@ -235,6 +278,7 @@ def main() -> int:
         all_feeds=len(ledger),
         built_iso=now.strftime("%Y-%m-%dT%H:%M:%SZ"),
         built_human=now.strftime("%d %b %Y, %H:%M UTC"),
+        brief=brief_html,
         **shared,
     )
     feed = env.get_template("feed.xml.j2").render(

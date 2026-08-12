@@ -28,6 +28,8 @@ MIN_ITEMS = 8            # below this the page isn't worth a deploy
 MIN_LIVE_FEEDS = 4       # a collapsed source set means something systemic broke
 MIN_HTML_BYTES = 4000    # catches a template that rendered to nothing
 MAX_FLAGGED_TITLES = 2   # a couple of visible [UNTRANSLATED] tags is tolerable
+BRIEF_MIN_WORDS = 900    # half the target; below this the model bailed early
+BRIEF_MIN_LINKS = 12     # a brief nobody can check is not worth publishing
 
 
 @dataclass
@@ -36,6 +38,48 @@ class Result:
     ok: bool
     blocking: bool
     detail: str = ""
+
+
+def check_brief(brief: str) -> list[Result]:
+    """Gate the daily brief on its own, separately from the page.
+
+    Deliberately not part of `run()`. The brief is one component of the page and
+    the story list does not depend on it, so a bad brief should cost the reader
+    the brief — not the whole site. `build.py` runs this first and drops the
+    brief on failure, which means these are blocking for the brief and invisible
+    to the page verdict. A dropped brief is reported loudly; silently shipping a
+    degraded page is the failure mode this project has already been bitten by.
+
+    Nothing else covers this text: `no_cjk_in_body` in `run()` walks the story
+    items, so a Chinese character in the brief would otherwise ship unseen.
+    """
+    out: list[Result] = []
+
+    def add(name, ok, blocking, detail=""):
+        out.append(Result(name, ok, blocking, detail))
+
+    words = len(brief.split())
+    add("brief_nonempty", words >= BRIEF_MIN_WORDS, True,
+        f"{words} words (floor {BRIEF_MIN_WORDS})")
+
+    # Hard constraint #1 again, on text the page-level check never sees. Opus in
+    # particular likes to gloss a company with its original Chinese name.
+    cjk = CJK.findall(brief)
+    add("brief_no_cjk", not cjk, True,
+        "clean" if not cjk else f"{len(cjk)} Chinese char(s): {''.join(cjk[:12])}")
+
+    # A brief with no links is unfalsifiable — the reader cannot check a single
+    # claim. Observed for real: 2,900 words citing nothing.
+    links = re.findall(r"\[[^\]]+\]\((https?://[^)]+)\)", brief)
+    add("brief_has_links", len(links) >= BRIEF_MIN_LINKS, True,
+        f"{len(links)} links (floor {BRIEF_MIN_LINKS})")
+
+    add("brief_has_headline", brief.lstrip().startswith("# "), True,
+        "h1 present" if brief.lstrip().startswith("# ") else "no H1")
+
+    hosts = {u.split("/")[2].lower().replace("www.", "") for u in links}
+    add("brief_source_spread", len(hosts) >= 6, False, f"{len(hosts)} distinct hosts")
+    return out
 
 
 def run(items, clusters, ledger, rank_status: dict, html: str,

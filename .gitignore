@@ -17,3 +17,9 @@ venv/
 *.env
 .dev.vars
 .wrangler/
+
+# Experiment scratch. Model outputs from prompt/model comparison runs — useful
+# while iterating, meaningless once the prompt has moved on.
+experiments/playbooks/
+experiments/compare/
+experiments/layouts/
