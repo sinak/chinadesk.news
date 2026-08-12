@@ -200,6 +200,16 @@ feeds:
     weight: 0.9
     max_items: 8
     fetch_body: true
+    # Same problem 36Kr has, and worse: this feed is the 界面快报 newsflash desk,
+    # which is almost entirely A-share and FX market wire — index futures, the
+    # dollar index, gold, alumina. On a sampled day all 8 items were quotes.
+    # They arrive as one-line stubs (median body 152 chars against QbitAI's
+    # 3,665), so the ranker cannot write two real bullets from them and
+    # correctly writes fewer, which is what kept tripping details_present.
+    # Filtering the wire is the fix; raising the check's tolerance would only
+    # have silenced a true signal. Markets are not a beat here.
+    drop_title_keywords: ['涨', '跌', '指数', '夜盘', '主力合约', '油价', '收盘',
+                          '回购', '股份', '净利润', '业绩预告', '盘前']
 
   - id: cdt
     name: China Digital Times
