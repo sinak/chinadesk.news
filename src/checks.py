@@ -28,6 +28,7 @@ MIN_ITEMS = 8            # below this the page isn't worth a deploy
 MIN_LIVE_FEEDS = 4       # a collapsed source set means something systemic broke
 MIN_HTML_BYTES = 4000    # catches a template that rendered to nothing
 MAX_FLAGGED_TITLES = 2   # a couple of visible [UNTRANSLATED] tags is tolerable
+MAX_THIN_ITEMS = 3       # a few short dropdowns is variance; twenty is a broken ranker
 BRIEF_MIN_WORDS = 900    # half the target; below this the model bailed early
 BRIEF_MIN_LINKS = 12     # a brief nobody can check is not worth publishing
 
@@ -148,11 +149,17 @@ def run(items, clusters, ledger, rank_status: dict, html: str,
         f"{len(misshaped)} item(s) whose detail is not a list — the template "
         f"would iterate it character by character" if misshaped else "ok")
 
+    # Tolerance, not zero tolerance. This check exists to catch the ranker
+    # breaking systemically — detail stopping altogether, or arriving as a
+    # string that renders one character per bullet, which has happened. One
+    # thin item out of seventy is model variance, and blocking the whole
+    # publish over it means the site silently stops updating on an ordinary
+    # day. A stale page is worse than a page with one weak dropdown.
     thin = [i for i in items if len(getattr(i, "detail", None) or []) < 2]
     thin_names = ", ".join(sorted({i.source_name for i in thin})[:4])
-    add("details_present", not thin, True,
-        f"{len(thin)} item(s) with fewer than 2 bullets: {thin_names}"
-        if thin else "all have detail")
+    add("details_present", len(thin) <= MAX_THIN_ITEMS, True,
+        f"{len(thin)} item(s) with fewer than 2 bullets (max {MAX_THIN_ITEMS}): "
+        f"{thin_names}" if thin else "all have detail")
 
     uids = [i.uid for i in items]
     add("no_duplicate_uids", len(uids) == len(set(uids)), True,

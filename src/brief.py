@@ -306,14 +306,41 @@ def brief_dir(out_dir: Path) -> Path:
     return out_dir / "brief"
 
 
+def looks_like_brief(text: str) -> bool:
+    """Cheap shape check: is this a brief, or is it something else entirely?
+
+    Necessary because Cloudflare Pages answers a request for a file that does
+    not exist with `200 OK` and the body of index.html, rather than a 404. A
+    status check alone therefore reads the site's own homepage back as today's
+    brief — and because a cache hit is re-published, that HTML would then be
+    served as the brief and read back again on every later build. Observed in
+    production: an 8,424-word "brief" with no headline and no links, which the
+    preflight gate caught and dropped.
+
+    Only structural facts are checked, not quality — `checks.check_brief` is the
+    authority on whether a real brief is good enough to publish. This just
+    answers "did we get a markdown brief at all".
+    """
+    t = (text or "").lstrip()
+    if not t.startswith("# "):
+        return False
+    head = t[:400].lower()
+    if "<!doctype" in head or "<html" in head:
+        return False
+    return "](http" in t          # a brief always links out
+
+
 def load_brief(out_dir: Path, site_url: str, day: str) -> str | None:
     """Today's brief if it already exists locally or on the live site."""
     local = brief_dir(out_dir) / f"{day}.md"
     if local.exists():
         try:
             text = local.read_text(encoding="utf-8").strip()
-            if text:
+            if looks_like_brief(text):
                 return text
+            # A poisoned local file would otherwise survive every later build.
+            print(f"[brief] local {day}.md is not a brief — ignoring it",
+                  file=sys.stderr)
         except OSError:
             pass
     if not site_url:
@@ -321,8 +348,16 @@ def load_brief(out_dir: Path, site_url: str, day: str) -> str | None:
     try:
         import requests
         r = requests.get(f"{site_url}/brief/{day}.md", timeout=15)
-        if r.status_code == 200 and r.text.strip():
+        ctype = r.headers.get("content-type", "")
+        if r.status_code != 200:
+            return None
+        if "html" in ctype.lower():
+            return None           # Pages' 200-with-index.html for a missing file
+        if looks_like_brief(r.text):
             return r.text.strip()
+        print(f"[brief] {site_url}/brief/{day}.md returned "
+              f"{len(r.text)} chars that are not a brief — regenerating",
+              file=sys.stderr)
     except Exception:  # noqa: BLE001 - a missing brief just means generate one
         pass
     return None
