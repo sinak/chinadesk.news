@@ -1,0 +1,125 @@
+
+:root{
+  --bg:#FAFAF8; --panel:#FFF; --ink:#14161A; --ink-2:#4A5157; --ink-3:#7C858C;
+  --rule:#E1E0DA; --rule-2:#EFEEE9; --seal:#A4302A; --jade:#286155; --hl:#FFF8E6;
+}
+@media (prefers-color-scheme:dark){
+  :root{ --bg:#131416; --panel:#191B1E; --ink:#E8E7E3; --ink-2:#A9AFB4; --ink-3:#767D83;
+         --rule:#2B2E32; --rule-2:#232629; --seal:#E0736C; --jade:#6FB5A4; --hl:#25231C; }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:14px/1.42 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+.wrap{max-width:52rem;margin:0 auto;padding:0 .9rem 4rem}
+a{color:var(--ink);text-decoration:none}
+a:hover{color:var(--seal);text-decoration:underline}
+a:focus-visible{outline:2px solid var(--seal);outline-offset:2px}
+
+/* masthead */
+header.mast{display:flex;align-items:baseline;gap:.7rem;flex-wrap:wrap;
+  padding:1.1rem 0 .5rem;border-bottom:2px solid var(--ink);margin-bottom:.2rem}
+.mast h1{margin:0;font-size:1.2rem;font-weight:700;letter-spacing:-.02em}
+.mast .tag{font-size:.72rem;color:var(--ink-3)}
+.mast .meta{margin-left:auto;font-size:.7rem;color:var(--ink-3);
+  font-variant-numeric:tabular-nums;display:flex;gap:.8rem;flex-wrap:wrap}
+.dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--jade);
+  margin-right:.3rem;vertical-align:middle}
+
+/* day tabs — catching up on a missed day is the point, so they sit above the
+   masthead where a reader looks first, not buried in a footer. */
+.days{display:flex;gap:.1rem;flex-wrap:wrap;padding:.55rem 0 0;font-size:.72rem}
+.days a{padding:.2rem .5rem;border:1px solid var(--rule);border-radius:3px;
+  color:var(--ink-3);white-space:nowrap;text-decoration:none;background:var(--panel)}
+.days a:hover{color:var(--seal);border-color:var(--seal);text-decoration:none}
+.days a.on{background:var(--ink);color:var(--bg);border-color:var(--ink);font-weight:600}
+.days .n{margin-left:.3rem;opacity:.55;font-variant-numeric:tabular-nums}
+
+/* one ranked river; size tiers carry the hierarchy */
+main{margin-top:1rem}
+.story{border-bottom:1px solid var(--rule-2);padding:.42rem 0}
+.story:last-child{border-bottom:0}
+.hl{display:flex;gap:.45rem;align-items:baseline}
+.hl h3{margin:0;font-weight:600;line-height:1.3;flex:1;letter-spacing:-.005em}
+.src{font-size:.68rem;color:var(--jade);white-space:nowrap;font-weight:500}
+.age{font-size:.66rem;color:var(--ink-3);white-space:nowrap;font-variant-numeric:tabular-nums}
+.sum{margin:.16rem 0 0;font-size:.82rem;color:var(--ink-2);line-height:1.4}
+
+/* tier 1 — the lead block. Big type, generous space, a rule to close it off. */
+.t1{padding:.75rem 0 .85rem}
+.t1 .hl h3{font-size:1.62rem;font-weight:700;line-height:1.16;letter-spacing:-.022em}
+.t1 .sum{font-size:.92rem;margin-top:.3rem;color:var(--ink-2)}
+.t1 .src{font-size:.74rem}
+.story.t1:last-of-type{border-bottom:2px solid var(--ink);margin-bottom:.5rem}
+
+/* tier 2 — the body of the page */
+.t2 .hl h3{font-size:1.02rem}
+.t2 .sum{font-size:.82rem}
+
+/* tier 3 — compact tail; headline + attribution only */
+.t3{padding:.3rem 0}
+.t3 .hl h3{font-size:.86rem;font-weight:500}
+.t3 .sum{display:none}
+
+/* corroboration, inline — the whole point of clustering */
+.also{margin:.2rem 0 0;font-size:.74rem;color:var(--ink-3);line-height:1.45}
+.also b{font-weight:600;color:var(--ink-3)}
+.also a{color:var(--jade);text-decoration:none}
+.also a:hover{text-decoration:underline;color:var(--seal)}
+.t3 .also{font-size:.7rem}
+
+.badge{font-size:.6rem;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--seal);border:1px solid var(--seal);border-radius:2px;
+  padding:0 .22rem;white-space:nowrap;opacity:.85}
+.tag{font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;font-weight:600;
+  color:var(--ink-3);white-space:nowrap}
+
+/* Per-story fragment link. Faint rather than hover-only so it stays reachable
+   on touch, where there is no hover state to reveal it. */
+.anchor{font-size:.72rem;color:var(--ink-3);text-decoration:none;opacity:.32;
+  white-space:nowrap;transition:opacity .12s ease,color .12s ease}
+.story:hover .anchor{opacity:.7}
+.anchor:hover,.anchor:focus-visible{opacity:1;color:var(--seal);text-decoration:none}
+/* Anchored story gets a brief marker so you can see where you landed. */
+.story:target{background:var(--hl);box-shadow:0 0 0 .5rem var(--hl)}
+
+/* expander */
+details{margin-top:.2rem}
+details>summary{cursor:pointer;list-style:none;display:inline-flex;align-items:center;
+  gap:.25rem;font-size:.7rem;color:var(--ink-3);padding:.08rem 0;user-select:none}
+details>summary::-webkit-details-marker{display:none}
+details>summary::before{content:"▸";display:inline-block;transition:transform .12s ease;
+  font-size:.75rem;color:var(--ink-3)}
+details[open]>summary::before{transform:rotate(90deg)}
+details>summary:hover{color:var(--seal)}
+.body{margin:.25rem 0 .3rem;padding:.5rem .65rem .5rem 1.5rem;background:var(--panel);
+  border-left:2px solid var(--rule);font-size:.82rem;line-height:1.5;color:var(--ink-2)}
+ul.body{list-style:disc}
+ul.body li{margin:0 0 .35rem}
+ul.body li:last-child{margin:0}
+ul.body li::marker{color:var(--ink-3)}
+.rel{list-style:none;margin:.3rem 0 0;padding:0}
+.rel li{font-size:.76rem;padding:.1rem 0 .1rem .8rem;position:relative;color:var(--ink-3)}
+.rel li::before{content:"↳";position:absolute;left:0;color:var(--rule)}
+.links{margin-top:.35rem;font-size:.68rem;color:var(--ink-3);display:flex;gap:.7rem;flex-wrap:wrap}
+
+/* ledger */
+.ledger{margin-top:2.2rem;border-top:2px solid var(--ink);padding-top:.6rem;
+  font-size:.68rem;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.ledger table{width:100%;border-collapse:collapse}
+.ledger td{padding:.12rem .4rem .12rem 0}
+.ok{color:var(--jade)} .bad{color:var(--seal)}
+footer{margin-top:1.2rem;font-size:.68rem;color:var(--ink-3);line-height:1.6}
+
+@media (max-width:560px){
+  .hl{flex-wrap:wrap}
+  .hl h3{flex-basis:100%;order:1}
+  /* .anchor must be listed here too — without it the default order:0 floats it
+     above the headline and it eats a whole row on every story. */
+  .src,.age,.badge,.anchor{order:2}
+  /* The desktop lead size costs ~3 lines per headline at 375px, which guts the
+     density the whole page is for. Keep the hierarchy, shrink the gap. */
+  .t1 .hl h3{font-size:1.24rem}
+  .t2 .hl h3{font-size:.98rem}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}

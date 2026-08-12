@@ -1,0 +1,19 @@
+# Generated output — rebuilt every run, and the day files under dist/data are
+# republished to the live site rather than versioned here.
+dist/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.mypy_cache/
+.pytest_cache/
+
+# Secrets. OPENROUTER_API_KEY and CLOUDFLARE_API_TOKEN belong in the shell, in
+# .env locally, or in repository secrets for CI — never in the tree.
+.env
+.env.*
+*.env
+.dev.vars
+.wrangler/

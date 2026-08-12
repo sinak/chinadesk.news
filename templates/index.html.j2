@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ site_name }} — {{ built_human }}</title>
+{# Deliberately evergreen. Slack/X/LinkedIn cache an unfurl for hours to days,
+   so naming current headlines would advertise stories that have already rotated
+   off by the time someone clicks. Counts drift harmlessly; headlines would lie. #}
+<meta name="description" content="{{ tagline }}. {{ site_description }}.">
+<link rel="alternate" type="application/rss+xml" title="{{ site_name }}" href="/feed.xml">
+{% if site_url %}<link rel="canonical" href="{{ site_url }}/">{% endif %}
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="{{ site_name }}">
+<meta property="og:title" content="{{ site_name }} — {{ tagline }}">
+<meta property="og:description" content="{{ tagline }}. {{ site_description }}.">
+{% if site_url %}<meta property="og:url" content="{{ site_url }}/">{% endif %}
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="{{ site_name }} — {{ tagline }}">
+<meta name="twitter:description" content="{{ tagline }}. {{ site_description }}.">
+<style>
+{% include "themes/" ~ theme ~ ".css" %}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+{% if day_tabs and day_tabs|length > 1 %}
+<nav class="days" aria-label="Archive">
+  {% for t in day_tabs %}
+  <a href="{{ t.href }}"{% if t.current %} class="on" aria-current="page"{% endif %}>{{ t.label }}<span class="n">{{ t.count }}</span></a>
+  {% endfor %}
+</nav>
+{% endif %}
+
+<header class="mast">
+  <h1>{{ site_name }}</h1>
+  <span class="tagline">{{ tagline }}</span>
+  <span class="meta">
+    <span><span class="dot"></span>{{ built_human }}</span>
+    <span>{{ total }} stories</span>
+    {% if archive_day %}<span>archived day</span>{% else %}<span>{{ ok_feeds }}/{{ all_feeds }} sources</span>{% endif %}
+  </span>
+</header>
+
+<main>
+{% for c in clusters %}
+{% set it = c.lead %}
+<article class="story t{{ c.tier }}" id="{{ c.anchor }}">
+  <div class="hl">
+    <h3><a href="{{ it.link }}" rel="noopener nofollow">{{ it.title_en }}</a></h3>
+    <a class="anchor" href="#{{ c.anchor }}" title="Link to this story"
+       aria-label="Link to this story">#</a>
+    {% if c.section not in ('wire', 'lead') %}<span class="tag">{{ c.label }}</span>{% endif %}
+    <span class="src">{{ it.source_name }}</span>
+    <span class="age">{{ it.age }}</span>
+  </div>
+  {% if it.summary %}<p class="sum">{{ it.summary }}</p>{% endif %}
+
+  {# Corroboration inline, not behind a click — cluster size is the signal. #}
+  {% if c.also %}
+  <p class="also"><b>Also:</b>
+    {% for r in c.also %}<a href="{{ r.link }}" rel="noopener nofollow" title="{{ r.title_en }}">{{ r.source_name }}</a>{% if not loop.last %}, {% endif %}{% endfor %}
+  </p>
+  {% endif %}
+
+  {% if it.detail or c.related %}
+  <details>
+    <summary>More</summary>
+    {% if it.detail %}
+    <ul class="body">{% for point in it.detail %}<li>{{ point }}</li>{% endfor %}</ul>
+    {% endif %}
+    {% if c.related %}
+    <ul class="rel">
+      {% for r in c.related %}
+      <li><a href="{{ r.link }}" rel="noopener nofollow">{{ r.title_en }}</a>
+          <span class="src">{{ r.source_name }}</span></li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    {# Hands the story off to whichever assistant the reader already pays for,
+       rather than building one in. The prompt carries the headline, the outlet
+       and the original URL so the assistant has something to work from. #}
+    {%- set ask = 'I read this on China Desk, which summarises Chinese-language news in English: "'
+        ~ it.title_en ~ '" (' ~ it.source_name ~ ', ' ~ it.link_direct ~ ').'
+        ~ ' Give me the background needed to understand why it matters, and how'
+        ~ ' Chinese and Western coverage of it tend to differ.' -%}
+    <div class="links">
+      <a href="{{ it.link }}" rel="noopener nofollow">Open at {{ it.source_name }}</a>
+      <span class="ask">Ask
+        <a href="https://claude.ai/new?q={{ ask|urlencode }}" target="_blank" rel="noopener nofollow">Claude</a>
+        <a href="https://chatgpt.com/?q={{ ask|urlencode }}" target="_blank" rel="noopener nofollow">ChatGPT</a>
+      </span>
+    </div>
+  </details>
+  {% endif %}
+</article>
+{% endfor %}
+</main>
+
+{% if ledger %}
+<div class="ledger">
+  <details>
+    <summary style="font-size:.68rem">Source ledger</summary>
+    <table>
+      {% for f in ledger %}
+      <tr>
+        <td>{{ f.name }}</td>
+        <td class="{{ 'ok' if f.ok else 'bad' }}">{{ f.http or 'ERR' }}</td>
+        <td>{{ f.kept }}/{{ f.count }}</td>
+        <td>{{ ('+%d over cap' % f.capped) if f.capped else '' }}</td>
+        <td>{{ f.error or '' }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+  </details>
+</div>
+{% endif %}
+
+<footer>
+  Built {{ built_iso }} · next run within the hour ·
+  Stories link to the original source; Chinese-language sources open in Chinese.
+  Headlines and summaries are machine-generated from source material — verify before relying on them.
+</footer>
+
+</div>
+</body>
+</html>

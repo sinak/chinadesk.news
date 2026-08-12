@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>{{ site_name }}</title>
+    <link>{{ site_url }}/</link>
+    <atom:link href="{{ site_url }}/feed.xml" rel="self" type="application/rss+xml"/>
+    <description>{{ tagline }} — {{ site_description }}</description>
+    <language>en</language>
+    <lastBuildDate>{{ built_rfc822 }}</lastBuildDate>
+    <ttl>60</ttl>
+{% for c in clusters %}
+{% set it = c.lead %}
+    <item>
+      <title>{{ it.title_en }}</title>
+      <link>{{ it.link }}</link>
+      <guid isPermaLink="false">{{ site_url }}/#{{ c.anchor }}</guid>
+      <pubDate>{{ it.pub_rfc822 }}</pubDate>
+      <source url="{{ site_url }}/feed.xml">{{ it.source_name }}</source>
+      <description>{{ it.summary }}{% if c.also %} Also covered by: {% for r in c.also %}{{ r.source_name }}{% if not loop.last %}, {% endif %}{% endfor %}.{% endif %}{% if it.detail %}
+
+{{ it.detail }}{% endif %}</description>
+    </item>
+{% endfor %}
+  </channel>
+</rss>

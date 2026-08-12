@@ -1,0 +1,328 @@
+# Feed sources. `lang: zh` triggers translate-proxy rewriting on outbound links.
+# `weight` biases ranking (1.0 = neutral). `tier` groups sources for the ledger.
+
+# Absolute URLs for og:url and the feed's self-link. Both need a real origin —
+# relative URLs are ignored by unfurl crawlers and by most feed readers.
+site:
+  url: https://chinadesk.news
+  title: China Desk
+  tagline: China News, Summarized
+  # wire | terminal | utility — see templates/themes/
+  theme: utility
+
+# Injected into the ranking prompt so yuan figures convert consistently and
+# auditably rather than from whatever rate the model happens to recall. Rough is
+# fine — this exists to turn "数亿元" into "a few hundred million yuan (~$40M)",
+# not to price a trade. Refresh occasionally.
+fx:
+  usd_cny: 7.1
+  as_of: 2026-08
+
+# Hard ceiling on the front page. The ranker is told to be selective, but score
+# calibration drifts between runs, so the cap is what actually keeps the page
+# short. Cut stories are reported, never silently dropped. Day archive pages are
+# uncapped — catching up on a missed day is a different job from skimming today.
+max_stories: 34
+
+# Soft ceiling on any one section's share of the front page. The prompt asks for
+# balance, but prompt-level quotas have not held here (lead_restraint missed its
+# cap in every variant), so this enforces it. Applied only while trimming: an AI
+# story above the cap is skipped in favour of the next non-AI story, and if there
+# aren't enough others the cap is ignored rather than shortening the page.
+section_share:
+  ai: 0.22
+
+defaults:
+  timeout: 30
+  user_agent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36"
+
+feeds:
+  # --- English-language analysis (highest signal, already translated) ---
+  - id: chinai
+    name: ChinAI
+    url: https://chinai.substack.com/feed
+    lang: en
+    tier: analysis
+    weight: 1.8
+    note: Weekly. Translations of Chinese-language AI writing.
+
+  - id: chinatalk
+    name: ChinaTalk
+    url: https://www.chinatalk.media/feed
+    lang: en
+    tier: analysis
+    weight: 1.5
+
+  - id: pekingnology
+    name: Pekingnology
+    url: https://www.pekingnology.com/feed
+    lang: en
+    tier: analysis
+    weight: 1.3
+
+  - id: gingerriver
+    name: Ginger River Review
+    url: https://www.gingerriver.com/feed
+    lang: en
+    tier: analysis
+    weight: 1.2
+
+  - id: sinocism
+    name: Sinocism
+    url: https://sinocism.com/feed
+    lang: en
+    tier: analysis
+    weight: 1.3
+
+  # --- Chinese-language primary sources ---
+  - id: qbitai
+    name: QbitAI
+    url: https://www.qbitai.com/feed/   # trailing slash required; /feed returns 503
+    lang: zh
+    tier: ai
+    weight: 1.6
+    # The feed ships ~14 chars of body, so items were summarized from the
+    # headline alone. Article pages fetch fine; pull the text from them.
+    fetch_body: true
+
+  - id: kr36
+    name: 36Kr
+    url: https://www.36kr.com/feed
+    lang: zh
+    tier: tech
+    weight: 1.0
+    # ~80% A-share market wire. See drop_patterns below.
+    drop_patterns:
+      - "/newsflashes/"        # stock tickers, earnings blurbs
+    drop_title_keywords:
+      - 涨
+      - 跌
+      - 回购
+      - 股份
+      - 净利润
+      - 业绩预告
+      - 盘前
+      - 氪星晚报        # daily roundup digest — many unrelated items in one post
+
+  - id: solidot
+    name: Solidot
+    url: https://www.solidot.org/index.rss
+    lang: zh
+    tier: tech
+    weight: 1.1
+
+  # Added for cluster density. QbitAI/36Kr/Solidot have near-disjoint beats, so
+  # almost nothing corroborates; these three overlap them on AI and industry news.
+  - id: leiphone
+    name: Leiphone
+    url: https://www.leiphone.com/feed
+    lang: zh
+    tier: ai
+    weight: 1.2
+    # Real AI reporting, but the feed is padded with car-launch and awards PR.
+    drop_title_keywords:
+      - 正式上市
+      - 家轿
+      - 豪华SUV
+      - 赋能
+      - 推优
+
+  - id: geekpark
+    name: GeekPark
+    url: http://www.geekpark.net/rss
+    lang: zh
+    tier: tech
+    weight: 1.2
+    drop_title_keywords:
+      - 极客早知道        # daily roundup digest, not a story
+
+  - id: ithome
+    name: IT Home
+    url: https://www.ithome.com/rss/
+    lang: zh
+    tier: tech
+    weight: 0.8
+    # ~60 items/day, heavily consumer. Capped so it can't swamp the payload;
+    # weighted low and filtered for the obviously irrelevant. Much of the
+    # remaining Apple/Microsoft coverage is US news the reader already gets
+    # elsewhere, so the ranker should sink it — check that it does.
+    max_items: 12
+    drop_title_keywords:
+      - 游戏
+      - 固件
+      - 耳机
+      - 返校季
+      - 优惠
+      - 券后
+      - 到手价
+      - 苹果
+      - iPhone
+      - AirPods
+
+  # --- Politics, society, culture ---
+  # The feed set was almost entirely tech, which made the page read like a trade
+  # publication. These carry policy, society and culture. Probed 13 candidates;
+  # RADII, Caixin Global, MERICS, Guancha and Sanlian are dead or 404. Sixth Tone
+  # and What's on Weibo parse but publish no usable dates / are weeks stale.
+  - id: scmp
+    name: SCMP
+    url: https://www.scmp.com/rss/4/feed
+    lang: en           # English already — no translate proxy
+    origin: cn         # China-side reporting, not the US take
+    nature: reporting
+    tier: analysis
+    weight: 1.1
+    max_items: 10
+
+  - id: initium
+    name: Initium
+    url: https://theinitium.com/rss
+    lang: zh
+    nature: reporting
+    tier: analysis
+    weight: 1.2
+    max_items: 6
+    fetch_body: true   # feed carries titles only
+
+  - id: jiemian
+    name: Jiemian
+    url: https://a.jiemian.com/index.php?m=article&a=rss
+    lang: zh
+    nature: reporting
+    tier: tech
+    weight: 0.9
+    max_items: 8
+    fetch_body: true
+
+  - id: cdt
+    name: China Digital Times
+    url: https://chinadigitaltimes.net/feed/
+    lang: en
+    origin: cn
+    nature: reporting
+    tier: analysis
+    weight: 1.3        # low volume, high signal on censorship and civil society
+    max_items: 5
+
+  - id: wirechina
+    name: The Wire China
+    url: https://www.thewirechina.com/feed/
+    lang: en
+    origin: cn
+    nature: reporting
+    tier: analysis
+    weight: 1.2
+    max_items: 5
+    drop_title_keywords:
+      - Daily Roundup
+
+  # --- US coverage, for contrast rather than duplication ---
+  # These are not a suppression list. When a story runs in both places, the
+  # ranking prompt is asked to say how the framing differs; when it runs only
+  # here, that itself is the signal that the reader has probably seen it.
+  - id: techmeme
+    name: Techmeme
+    url: https://www.techmeme.com/feed.xml
+    lang: en
+    origin: us
+    nature: aggregator
+    tier: wire
+    weight: 0.7
+    max_items: 12
+    # Only China-relevant items. Their front pages are mostly US stories that
+    # can never contrast with Chinese coverage — every one was omitted anyway,
+    # so filtering here saves the slot and the tokens instead of paying the
+    # model to reject them. Matched against title + summary, case-insensitive.
+    keep_keywords: [china, chinese, beijing, shanghai, shenzhen, hong kong,
+                    huawei, alibaba, tencent, bytedance, tiktok, baidu, xiaomi,
+                    deepseek, qwen, moonshot, kimi, minimax, zhipu, manus,
+                    unitree, byd, nio, xpeng, smic, temu, shein, cnooc,
+                    "export control", "chip ban", "rare earth", taiwan]
+
+  - id: hn
+    name: Hacker News
+    fetcher: hn                  # Algolia API, not RSS — carries comments
+    url: https://news.ycombinator.com/
+    lang: en
+    origin: us
+    nature: forum
+    tier: wire
+    weight: 0.7
+    min_points: 80
+    max_items: 10
+    # Only China-relevant items. Their front pages are mostly US stories that
+    # can never contrast with Chinese coverage — every one was omitted anyway,
+    # so filtering here saves the slot and the tokens instead of paying the
+    # model to reject them. Matched against title + summary, case-insensitive.
+    keep_keywords: [china, chinese, beijing, shanghai, shenzhen, hong kong,
+                    huawei, alibaba, tencent, bytedance, tiktok, baidu, xiaomi,
+                    deepseek, qwen, moonshot, kimi, minimax, zhipu, manus,
+                    unitree, byd, nio, xpeng, smic, temu, shein, cnooc,
+                    "export control", "chip ban", "rare earth", taiwan]
+
+  # --- Sentiment, explicitly flagged as such ---
+  # Unverified chatter. The prompt is told never to state these as fact; they
+  # are here for mood and early signal, not for the record.
+  # Xueqiu is disabled, not forgotten. Its RSS carries titles with zero-length
+  # bodies, and the article pages are a JS-rendered SPA that yields no text to
+  # scrape either. Every item it produced summarized to "contains no substantive
+  # text" — six rows of noise per build. Re-enable only with a real body source.
+  # - id: xueqiu
+  #   name: Xueqiu
+  #   url: https://xueqiu.com/hots/topic/rss
+  #   lang: zh
+  #   nature: market
+  #   tier: wire
+  #   weight: 0.6
+  #   max_items: 6
+
+  - id: v2ex
+    name: V2EX
+    url: https://www.v2ex.com/feed/tab/tech.xml
+    lang: zh
+    nature: forum
+    tier: tech
+    weight: 0.6
+    max_items: 8
+    drop_title_keywords:
+      - 酷工作        # hiring board leaks into the tech tab
+
+# Sources with no usable feed. Scraped by src/scrape.py.
+scrape:
+  - id: tophub_ai
+    name: TopHub AI
+    url: https://tophub.today/c/ai
+    lang: zh
+    tier: ai
+    weight: 1.2
+    note: Aggregates Jiqizhixin, AIbase, HyperAI, CSDN, Juejin.
+
+# Never fetch these — documented so nobody retries them.
+blocked:
+  - host: mp.weixin.qq.com
+    reason: robots.txt disallows automated access. Look for 36Kr licensed reposts.
+  - host: www.36kr.com
+    reason: Direct curl hits a bot interstitial. Article pages need a browser UA + full headers; the RSS feed itself is fine.
+
+sections:
+  - key: lead
+    label: Lead
+    max: 5
+  - key: ai
+    label: AI
+    max: 14
+  - key: policy
+    label: Policy
+    max: 10
+  - key: culture
+    label: Culture
+    max: 10
+  - key: analysis
+    label: Analysis
+    max: 8
+  - key: signal
+    label: Signal
+    max: 6
+  - key: wire
+    label: Wire
+    max: 20

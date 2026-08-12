@@ -1,0 +1,15 @@
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer-when-downgrade
+
+/data/*
+  Cache-Control: public, max-age=60, must-revalidate
+
+/index.html
+  Cache-Control: public, max-age=300, must-revalidate
+
+/feed.xml
+  Cache-Control: public, max-age=300, must-revalidate
+
+/d/*
+  Cache-Control: public, max-age=1800

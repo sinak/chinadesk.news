@@ -1,0 +1,49 @@
+name: Build and deploy
+
+on:
+  schedule:
+    - cron: "7 * * * *"      # hourly, at :07 past
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# A build takes ~3 minutes and the cron fires hourly, so overlap is unlikely —
+# but a hung model call could run to the 1800s timeout, and two builds writing
+# the archive at once would race. Queue instead of cancelling: a cancelled run
+# publishes nothing, which is the one outcome worse than a late one.
+concurrency:
+  group: build-deploy
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+
+      # build.py exits non-zero if any blocking preflight check fails, which
+      # stops the job here and leaves the previous Cloudflare deployment live.
+      # A stale page beats a wrong one. Never add --skip-checks.
+      - name: Build site
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: python -m src.build --out dist
+
+      - name: Deploy to Cloudflare Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: >
+          npx --yes wrangler@4 pages deploy dist
+          --project-name chinadesk
+          --branch main
+          --commit-dirty=true
