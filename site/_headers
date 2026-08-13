@@ -8,17 +8,34 @@
   # a 'sha256-...' hash here, and the page will silently not run it until then.
   Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; img-src data: https:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
 
+# Rules match the REQUEST PATH, not the file that answers it. `/index.html`
+# therefore never applied to `https://chinadesk.news/`, which is the URL people
+# actually load — that fell through to Pages' own default. Both are listed, and
+# both say the same thing, so the front page's policy is a decision rather than
+# an accident.
+#
+# max-age=0 rather than a few minutes: the front page is the point of the site
+# and a reader who reloads is asking whether anything changed. Revalidating
+# costs one conditional request. Cloudflare reports cf-cache-status: DYNAMIC for
+# HTML here — it is not edge-cached — so this governs browsers.
+/
+  Cache-Control: public, max-age=0, must-revalidate
+
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+# Generated once a day, then immutable for that day. Five minutes is plenty and
+# keeps the build's own read-back cheap.
 /brief/*
   Cache-Control: public, max-age=300, must-revalidate
 
 /data/*
   Cache-Control: public, max-age=60, must-revalidate
 
-/index.html
-  Cache-Control: public, max-age=300, must-revalidate
-
 /feed.xml
   Cache-Control: public, max-age=300, must-revalidate
 
+# Past days do not change once the day has rolled. Longer is fine here; these
+# are the one thing on the site that is genuinely static.
 /d/*
   Cache-Control: public, max-age=1800
