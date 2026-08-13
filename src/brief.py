@@ -137,6 +137,14 @@ bolded fragments alone should come away knowing the day.
   lead-in. A reader should be able to stop after any take and have got a whole
   thought. If two adjacent paragraphs are about the same thing, they belong to
   one take; if the subject changes, that is a new take and a new lead-in.
+- Name the subject in every section that discusses it. Nobody reads this top
+  to bottom. The bold lead-ins invite skimming, so assume every section is
+  someone's first — a section that opens "one release, two different stories"
+  without saying which release is unreadable to the person who landed there,
+  even though you named it eight hundred words earlier. Say "DeepSeek's
+  V4-Pro", not "the release"; "Zhu Rongji's death", not "the news". Once per
+  section, worked into the sentence, is enough — you are re-anchoring, not
+  reintroducing, and repeating it every paragraph reads like a machine.
 - Em dashes for asides. A one-sentence paragraph for emphasis is good.
 - A tight bulleted run is fine where the material genuinely is a list — a spec
   sheet, three funding rounds, four provinces doing the same thing. Give each
