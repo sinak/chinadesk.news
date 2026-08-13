@@ -23,8 +23,9 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import yaml
@@ -106,7 +107,16 @@ bolded fragments alone should come away knowing the day.
 - Use short ALL-CAPS bold tags where they earn it, sparingly and never more than
   a few per brief: **THE NUMBER:**, **WHY IT MATTERS:**, **WHAT WE'RE WATCHING:**,
   **THE TELL:**, **WORTH NOTING:**.
-- Two to four sentences per paragraph. Break anything longer.
+- Keep paragraphs to roughly 55 words, and never past 75. Count words, not
+  sentences — three long sentences is still a wall. When a paragraph runs over,
+  do not trim it: split it where the thought turns, and give the second half its
+  own **bold lead-in**. Two tight paragraphs beat one dense one, and the second
+  lead-in is another handhold for someone skimming.
+- Group the day into takes, not a stream. Each section is several distinct
+  takes, each two to four short paragraphs long, each opening on its own bold
+  lead-in. A reader should be able to stop after any take and have got a whole
+  thought. If two adjacent paragraphs are about the same thing, they belong to
+  one take; if the subject changes, that is a new take and a new lead-in.
 - Em dashes for asides. A one-sentence paragraph for emphasis is good.
 - A tight bulleted run is fine where the material genuinely is a list — a spec
   sheet, three funding rounds, four provinces doing the same thing. Give each
@@ -189,9 +199,16 @@ Today's date is {TODAY} (UTC). Use it to judge what counts as recent — not as
 something to print. Chinese sources are eight hours ahead, so their timestamps
 may read as tomorrow; that does not change today's date.
 
-Aim for 1,800 to 2,200 words. That is long enough to carry an argument and
-short enough to read over coffee. Do not pad to reach it — if a section has
-nothing worth saying today, cut it and give the space to one that does.
+Length: 1,200 to 1,500 words. Treat 1,500 as a hard ceiling, not a target you
+may drift past — a brief that runs long stops being a brief. This sits beside a
+list of thirty-odd stories the reader can go read themselves, so your job is
+the argument, not the coverage.
+
+Getting there is a question of how many takes you run, not how compressed each
+one is. Cut whole takes rather than thinning all of them: four sharp ones beat
+seven hedged ones, and a section with nothing to say today should be dropped
+entirely rather than filled. Never shorten by removing the specifics — the
+numbers, names and mechanisms are the product. Shorten by covering less.
 
 Return GitHub-flavoured markdown. Open with an H1 that states today's argument
 in its own words — a sentence a reader could disagree with, not a label for the
@@ -301,6 +318,23 @@ def prior_briefs(n: int) -> list[tuple[str, str]]:
 FULL_DAYS = 2       # prior briefs carried in full, for genuine continuity
 DIGEST_DAYS = 5     # older ones carried as headline + threads only
 
+# The brief's day does not start at midnight UTC. Keyed on UTC, the first build
+# of the day is 00:07 UTC — 08:07 in Beijing — so the brief was being written
+# before China's news day had happened, from a feed still full of yesterday.
+# Offsetting the key by 16 hours moves the boundary to 16:07 UTC, which is
+# 00:07 in Beijing: the China day has just closed and the feed is complete.
+# It is also 09:07 Pacific in summer and 08:07 in winter, and because China
+# does not observe DST the Beijing anchor never drifts.
+#
+# The label stays honest: a brief generated at 16:07 UTC on the 13th keys to
+# 2026-08-13 and covers Beijing's 13th, which ended seven minutes earlier.
+BRIEF_DAY_OFFSET_HOURS = 16
+
+
+def brief_day(now: datetime) -> str:
+    """The China news day this brief covers."""
+    return (now - timedelta(hours=BRIEF_DAY_OFFSET_HOURS)).strftime("%Y-%m-%d")
+
 
 def brief_dir(out_dir: Path) -> Path:
     return out_dir / "brief"
@@ -369,62 +403,201 @@ def save_brief(out_dir: Path, day: str, text: str) -> None:
     (d / f"{day}.md").write_text(text, encoding="utf-8")
 
 
-def _digest(text: str) -> str:
+def validate(text: str) -> tuple[bool, str]:
+    """Run the publish gate. Imported late to keep the import graph acyclic."""
+    from src import checks
+    bad = [r for r in checks.check_brief(text) if not r.ok and r.blocking]
+    return (not bad), ", ".join(f"{r.name} ({r.detail})" for r in bad)
+
+
+def load_rejection(out_dir: Path, site_url: str, day: str) -> str | None:
+    """Why today's generation attempt was rejected, if it was."""
+    local = brief_dir(out_dir) / f"{day}.rejected"
+    if local.exists():
+        try:
+            return local.read_text(encoding="utf-8").strip() or "unknown"
+        except OSError:
+            pass
+    if not site_url:
+        return None
+    try:
+        import requests
+        r = requests.get(f"{site_url}/brief/{day}.rejected", timeout=15)
+        if r.status_code == 200 and "html" not in r.headers.get("content-type", "").lower():
+            return r.text.strip() or "unknown"
+    except Exception:  # noqa: BLE001
+        pass
+    return None
+
+
+def save_rejection(out_dir: Path, day: str, reason: str) -> None:
+    """Record that this day was attempted and produced unpublishable output.
+
+    Published alongside the briefs so it survives CI's clean checkout, for the
+    same reason the briefs are. Without it a brief that fails its gate would be
+    regenerated by every build for the rest of the day — six Opus calls instead
+    of one, each rejected, all invisible because the page still publishes.
+    """
+    d = brief_dir(out_dir)
+    d.mkdir(parents=True, exist_ok=True)
+    (d / f"{day}.rejected").write_text(reason, encoding="utf-8")
+
+
+_LIST_MARK = re.compile(r"^[-*]\s+")
+_MD_LINK = re.compile(r"\[([^\]]+)\]\((?:https?://[^)]*)\)")
+_SENT_END = re.compile(r"(?<=[.!?])\s+")
+
+
+def _blocks(lines: list[str], want_threads: bool) -> list[str]:
+    """Paragraphs and bullets of the threads section, kept as whole units."""
+    out: list[str] = []
+    buf: list[str] = []
+    inside = not want_threads          # when not filtering, take everything
+    for line in lines:
+        if line.startswith("#"):
+            if buf:
+                out.append(" ".join(buf))
+                buf = []
+            if want_threads:
+                inside = line.startswith("##") and "THREAD" in line.upper()
+            continue
+        if not inside:
+            continue
+        s = line.strip()
+        if s.startswith("- ") or s.startswith("* "):
+            if buf:
+                out.append(" ".join(buf))
+                buf = []
+            # Strip the list marker only. `lstrip("-* ")` also eats the opening
+            # ** of a bold lead-in and leaves its closing ** orphaned mid-line.
+            out.append(_LIST_MARK.sub("", s, count=1).strip())
+        elif s:
+            buf.append(s)
+        elif buf:
+            out.append(" ".join(buf))
+            buf = []
+    if buf:
+        out.append(" ".join(buf))
+    return [b for b in out if b]
+
+
+def _digest(text: str, limit: int = 1200) -> str:
     """Headline plus the threads section — what was claimed, not how it was said.
 
     Carrying a week of full prose invites the model to imitate its own voice and
     reuse its own framings; we watched a model lift an example headline verbatim
     from this very prompt. Older days therefore contribute memory, not style.
+
+    Trimming happens at unit boundaries. An earlier version sliced the joined
+    text at a fixed character count and left the last thread ending mid-word
+    ("Doubao now charges 12% on"), which is worse than dropping it: a truncated
+    claim reads as a complete one and the model has no way to tell. Whole
+    bullets and paragraphs are kept or dropped; if a single block is itself
+    over budget it is cut at a sentence end. Link syntax is stripped because
+    the digest is for recall, not for citing.
     """
     lines = text.splitlines()
     head = next((l for l in lines if l.startswith("# ")), "").lstrip("# ").strip()
-    out, keep = [], False
-    for l in lines:
-        if l.startswith("## "):
-            keep = "THREAD" in l.upper()
+
+    blocks = _blocks(lines, want_threads=True)
+    if not blocks:
+        # No threads section — the prompt allows dropping it. Fall back to the
+        # opening take, which still records what the day was judged to be about.
+        blocks = _blocks(lines, want_threads=False)[:2]
+
+    blocks = [_MD_LINK.sub(r"\1", b).strip() for b in blocks]
+
+    kept: list[str] = []
+    used = 0
+    for b in blocks:
+        if used + len(b) <= limit:
+            kept.append(b)
+            used += len(b)
             continue
-        if keep and l.strip():
-            out.append(l.strip())
-    body = " ".join(out)[:1200]
-    return f"{head}\n{body}".strip()
+        if kept:
+            break
+        # First block alone exceeds the budget: keep whole sentences from it.
+        room, acc = limit, []
+        for sent in _SENT_END.split(b):
+            if room - len(sent) < 0:
+                break
+            acc.append(sent)
+            room -= len(sent) + 1
+        kept.append(" ".join(acc) if acc else b[:limit].rsplit(" ", 1)[0])
+        break
+
+    return f"{head}\n" + "\n".join(f"- {b}" for b in kept) if kept else head
 
 
 def history(out_dir: Path, site_url: str, now: datetime) -> list[tuple[str, str]]:
-    """Recent briefs, most recent first: recent ones whole, older ones digested."""
-    from datetime import timedelta
+    """Recent briefs, most recent first: recent ones whole, older ones digested.
+
+    Also re-publishes every prior brief it finds. `wrangler pages deploy dist`
+    serves exactly what is in dist/ and nothing else, and CI checks out clean,
+    so a day file that is not rewritten each build silently disappears from the
+    site on the next deploy. Without this the archive never accumulates: every
+    build would find exactly one prior day forever, the two-full-days tier could
+    never fill, and `_digest` would never run at all. `archive.py` re-saves all
+    seven retained days for precisely this reason; the brief has to do the same.
+    """
     got: list[tuple[str, str]] = []
     for i in range(1, FULL_DAYS + DIGEST_DAYS + 1):
-        day = (now - timedelta(days=i)).strftime("%Y-%m-%d")
+        day = brief_day(now - timedelta(days=i))
         text = load_brief(out_dir, site_url, day)
         if not text:
             continue
+        save_brief(out_dir, day, text)      # keep it on the site for tomorrow
         got.append((day, text if len(got) < FULL_DAYS else _digest(text)))
     return got
 
 
 def ensure(out_dir: Path, site_url: str, now: datetime, window: int,
            cfg: dict, items) -> tuple[str | None, str]:
-    """Return (brief_markdown, status). Generates at most once per UTC day."""
-    day = now.strftime("%Y-%m-%d")
+    """Return (brief_markdown, status). Generates at most once per China day."""
+    day = brief_day(now)
+
+    # Carry the archive forward first, on every build rather than only on the
+    # one that generates. Five of the six daily builds hit the cache and return
+    # early, and each of them deploys — so if prior days were only rewritten on
+    # a generating build, the next cached build would drop them again.
+    prior = history(out_dir, site_url, now)
 
     cached = load_brief(out_dir, site_url, day)
     if cached:
         save_brief(out_dir, day, cached)   # re-publish so the file survives
-        return cached, "cached"
+        return cached, f"cached ({len(prior)} prior kept)"
+
+    # Already tried today and the output was unpublishable. Carry the marker
+    # forward and stop — regenerating would spend again on every remaining
+    # build of the day, and the result was already judged unfit once.
+    rejected = load_rejection(out_dir, site_url, day)
+    if rejected:
+        save_rejection(out_dir, day, rejected)
+        return None, f"rejected earlier today, not retrying: {rejected}"
 
     if not os.environ.get("OPENROUTER_API_KEY"):
         return None, "no api key"
     if not items:
         return None, "no items"
 
-    prior = history(out_dir, site_url, now)
     system = (SYSTEM
               .replace("{USD_CNY}", str((cfg.get("fx") or {}).get("usd_cny", 7.1)))
-              .replace("{TODAY}", now.strftime("%A, %d %B %Y"))
+              .replace("{TODAY}", datetime.strptime(day, "%Y-%m-%d")
+                       .strftime("%A, %d %B %Y"))
               .replace("{THREADS}", THREADS if prior else ""))
     text, err = call(system, payload(items, prior))
     if text is None:
         return None, f"failed: {err}"
+
+    # Gate before publishing, not after. Written the other way round, a brief
+    # that fails its checks is still deployed to /brief/<day>.md — dropped from
+    # the homepage, but served as a file, treated as a valid cache hit by every
+    # later build, and fed to tomorrow's model call as history. Only output
+    # that passes is ever written as a brief.
+    ok, why = validate(text)
+    if not ok:
+        save_rejection(out_dir, day, why)
+        return None, f"rejected: {why}"
 
     save_brief(out_dir, day, text)
     return text, f"generated ({len(text.split())} words, {len(prior)} prior)"

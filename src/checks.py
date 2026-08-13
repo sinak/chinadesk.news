@@ -83,8 +83,16 @@ def check_brief(brief: str) -> list[Result]:
     return out
 
 
-def run(items, clusters, ledger, rank_status: dict, html: str,
-        feed: str = "") -> list[Result]:
+def run(items, clusters, ledger, rank_status: dict, html: str | None = None,
+        feed: str | None = None) -> list[Result]:
+    """Preflight the build. `html` and `feed` are optional.
+
+    Called twice: once on the story data alone, before the brief is generated,
+    and once on everything after rendering. The first pass is what stops the
+    build paying ~$2 for a brief that a failed ranking call was always going to
+    prevent publishing — the expensive call now sits behind the cheap gate.
+    Checks that need rendered output are simply skipped when it is not there yet.
+    """
     out: list[Result] = []
 
     def add(name, ok, blocking, detail=""):
@@ -94,8 +102,9 @@ def run(items, clusters, ledger, rank_status: dict, html: str,
     add("items_present", bool(items), True, f"{len(items)} items")
     add("min_items", len(items) >= MIN_ITEMS, True,
         f"{len(items)} items (floor {MIN_ITEMS})")
-    add("html_rendered", len(html) >= MIN_HTML_BYTES, True,
-        f"{len(html)} bytes (floor {MIN_HTML_BYTES})")
+    if html is not None:
+        add("html_rendered", len(html) >= MIN_HTML_BYTES, True,
+            f"{len(html)} bytes (floor {MIN_HTML_BYTES})")
     add("clusters_present", bool(clusters), True, f"{len(clusters)} clusters")
 
     # --- the ranking actually ran ----------------------------------------
