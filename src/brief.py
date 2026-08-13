@@ -318,17 +318,26 @@ def prior_briefs(n: int) -> list[tuple[str, str]]:
 FULL_DAYS = 2       # prior briefs carried in full, for genuine continuity
 DIGEST_DAYS = 5     # older ones carried as headline + threads only
 
-# The brief's day does not start at midnight UTC. Keyed on UTC, the first build
-# of the day is 00:07 UTC — 08:07 in Beijing — so the brief was being written
-# before China's news day had happened, from a feed still full of yesterday.
-# Offsetting the key by 16 hours moves the boundary to 16:07 UTC, which is
-# 00:07 in Beijing: the China day has just closed and the feed is complete.
-# It is also 09:07 Pacific in summer and 08:07 in winter, and because China
-# does not observe DST the Beijing anchor never drifts.
+# The brief's day does not start at midnight UTC. Keyed on UTC, the generating
+# build was 00:07 UTC — 08:07 in Beijing — so the brief was written before
+# China's news day had happened, from a feed still full of yesterday.
 #
-# The label stays honest: a brief generated at 16:07 UTC on the 13th keys to
-# 2026-08-13 and covers Beijing's 13th, which ended seven minutes earlier.
-BRIEF_DAY_OFFSET_HOURS = 16
+# The boundary is 12:00 UTC, which is 20:00 in Beijing. That is deliberately
+# NOT the end of the China day, and the reason is GitHub's scheduler: it runs
+# cron workflows on a best-effort basis and has been observed 1h13m to 2h31m
+# late on this repo. Anchoring to midnight Beijing (16:00 UTC, 09:00 Pacific)
+# meant generation could not even start until the reader's morning, and the
+# delay pushed a finished brief to mid-morning. Anchoring at 20:00 Beijing lets
+# the 12:07 UTC slot generate — around 13:37 in practice — so the brief is on
+# the site by roughly 07:00 Pacific, before it is read. The cost is the last
+# four hours of the Beijing day, which are mostly quiet.
+#
+# Because China does not observe DST the Beijing anchor never drifts; the
+# Pacific times move an hour with US DST.
+#
+# The label stays honest: a brief generated at 13:37 UTC on the 13th keys to
+# 2026-08-13 and covers Beijing's 13th up to that evening.
+BRIEF_DAY_OFFSET_HOURS = 12
 
 
 def brief_day(now: datetime) -> str:
