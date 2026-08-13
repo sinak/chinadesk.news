@@ -143,13 +143,17 @@ footer{margin-top:1.3rem;font-size:.8rem;color:var(--ink-3);line-height:1.6;
 .briefcol,.rivercol{min-width:0}
 .railhead{font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
   color:var(--ink-3);border-bottom:2px solid var(--ink);padding-bottom:.3rem;margin:0 0 .7rem}
-.doc{font-size:1rem;line-height:1.62;color:var(--ink-2);max-width:40rem}
-.doc h1{font-size:1.72rem;line-height:1.2;color:var(--ink);letter-spacing:-.02em;
+/* The brief is the one part of this page meant to be read rather than skimmed,
+   so it gets reading type: larger than the river, looser leading, and a measure
+   held near 70 characters. The river stays dense on purpose — the contrast in
+   type size is what tells you which column is which. */
+.doc{font-size:1.08rem;line-height:1.68;color:var(--ink-2);max-width:38rem}
+.doc h1{font-size:1.82rem;line-height:1.18;color:var(--ink);letter-spacing:-.02em;
   margin:0 0 .7rem;font-weight:700}
 .doc h2{font-size:.74rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
   color:var(--accent);border-bottom:1px solid var(--rule);padding-bottom:.25rem;
   margin:1.7rem 0 .7rem}
-.doc p{margin:0 0 .9rem}
+.doc p{margin:0 0 1rem}
 .doc strong{color:var(--ink);font-weight:700}
 .doc a{color:var(--seal)}
 .doc ul{margin:0 0 .9rem;padding-left:1.2rem}
