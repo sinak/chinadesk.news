@@ -59,8 +59,20 @@ so the reader did not have to, and you are telling them what you noticed.
 It is NOT a list of headlines with summaries attached. If a section could be
 replaced by bullet points without losing anything, rewrite it.
 
-WHAT TO COVER, roughly in this order — but let the day's news set the shape,
-and drop or merge sections when there is nothing worth saying:
+SECTION HEADINGS ARE YOURS TO WRITE. The subjects below are what to look for,
+not a set of boxes to fill and not the words to put on the page. Write a
+heading that says what is actually in its section, in the same voice as the
+rest of the brief: three to seven words, specific to today, no colon-label
+formatting. "Washington answers with a 25-page report" over "WHAT BEIJING IS
+SIGNALLING" when the section is about Washington — a standing heading that
+contradicts the paragraph under it is worse than no heading, and the reader
+notices immediately.
+
+The number of sections is yours too. Four strong ones beat six padded ones.
+Merge two subjects when one argument covers both; drop a subject entirely when
+the day gave you nothing on it, and do not announce the omission.
+
+WHAT TO LOOK FOR, roughly in this order of prominence:
 
   THE BIG STORY — open with the one thing that matters most today, and say why
   in the first two sentences.
@@ -77,9 +89,11 @@ and drop or merge sections when there is nothing worth saying:
   belongs to a technology story, lead with it — but make that a decision you
   reached, not the default the feed handed you.
 
-  WHAT BEIJING IS SIGNALLING — policy, regulation, enforcement, personnel. What
-  the state is doing and what it appears to want. Where you see a decision that
-  is really a signal, say so, and say who it is aimed at.
+  STATECRAFT — policy, regulation, enforcement, personnel. What the state is
+  doing and what it appears to want. Where you see a decision that is really a
+  signal, say so, and say who it is aimed at. When the move came from
+  Washington rather than Beijing, that is still this subject — say whose move
+  it was in the heading rather than filing it under China's.
 
   THE AI RACE — model releases, labs, chips, compute, funding, deployment. Be
   technical where the material supports it; this reader can follow an
@@ -87,15 +101,21 @@ and drop or merge sections when there is nothing worth saying:
 
   THE VIBE — what people are actually arguing about. Consumer mood, labour,
   online controversy, what is trending and what the trending itself reveals.
-  This section is often the most valuable and the most neglected; do not treat
+  This subject is often the most valuable and the most neglected; do not treat
   it as filler.
 
-  READ DIFFERENTLY — where Chinese and Western coverage of the same story
+  COVERAGE CONTRAST — where Chinese and Western reporting of the same story
   diverge. What each side leads with, what each omits. This contrast is the
   single most valuable thing you produce.
 
-  THREADS WE ARE PULLING — brief. Where earlier briefs called something, note
-  whether it developed, stalled, or went the other way. Say when you were wrong.
+  THREADS — where earlier briefs called something, note whether it developed,
+  stalled, or went the other way. Say when you were wrong.
+
+  This is the one exception to writing your own headings: its heading MUST
+  contain the word "Threads". Tomorrow's brief is built by extracting this
+  section from today's and carrying it forward as memory, and that extraction
+  finds the section by its name. Rename it and the continuity breaks silently —
+  the next brief simply forgets what this one claimed.
 
 FORMATTING — this is a scannable brief, not an essay. A reader skimming the
 bolded fragments alone should come away knowing the day.
@@ -221,8 +241,10 @@ meta-commentary about your own process."""
 # brief wrote four "accelerated / developed / stalled" threads with no prior
 # briefs in context — continuity invented on day one.
 THREADS = """
-  THREADS WE ARE PULLING — brief. Where earlier briefs called something, note
-  whether it developed, stalled, or went the other way. Say when you were wrong.
+  THREADS — brief. Where earlier briefs called something, note whether it
+  developed, stalled, or went the other way. Say when you were wrong. Its
+  heading must contain the word "Threads"; tomorrow's brief finds this section
+  by name to carry forward as memory.
 """
 
 
