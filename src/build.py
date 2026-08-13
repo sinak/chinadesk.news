@@ -59,8 +59,84 @@ def brief_to_html(md_text: str) -> str:
     """
     escaped = md_text.replace("<", "&lt;").replace(">", "&gt;")
     html = markdown.markdown(escaped, extensions=["sane_lists"])
-    return nh3.clean(html, tags=_BRIEF_TAGS, attributes=_BRIEF_ATTRS,
-                     url_schemes=_BRIEF_SCHEMES, link_rel="noopener nofollow")
+    clean = nh3.clean(html, tags=_BRIEF_TAGS, attributes=_BRIEF_ATTRS,
+                      url_schemes=_BRIEF_SCHEMES, link_rel="noopener nofollow")
+    return _add_ask_links(clean)
+
+
+_TAGS_RE = re.compile(r"<[^>]+>")
+_H2_SPLIT = re.compile(r"(?=<h2>)")
+_SENT_SPLIT = re.compile(r"(?<=[.!?])\s+")
+# Percent-encoding inflates the prompt by roughly 40%, and the safe ceiling for
+# a URL is 2,048 characters — some servers still reject longer. 850 characters
+# of section text leaves room for the framing around it.
+_ASK_CHARS = 850
+
+
+def _trim_to_sentence(text: str, limit: int) -> str:
+    """Cut at a sentence end, never mid-word. A prompt that stops in the middle
+    of a clause asks the assistant to explain a fragment."""
+    if len(text) <= limit:
+        return text
+    kept, room = [], limit
+    for sent in _SENT_SPLIT.split(text):
+        if room - len(sent) < 0:
+            break
+        kept.append(sent)
+        room -= len(sent) + 1
+    return " ".join(kept) if kept else text[:limit].rsplit(" ", 1)[0]
+
+
+def _ask_url(host: str, prompt: str) -> str:
+    from urllib.parse import quote
+    return f"{host}{quote(prompt, safe='')}"
+
+
+def _ask_block(heading: str, body_text: str, headline: str) -> str:
+    """The 'read more about this' handoff for one section of the brief.
+
+    Hands the section to whichever assistant the reader already pays for rather
+    than building one in. The prompt carries the brief's headline, the section
+    heading and the section's own text, because the assistant cannot see the
+    page and a bare "tell me more" produces a bare answer.
+    """
+    body = _trim_to_sentence(" ".join(body_text.split()), _ASK_CHARS)
+    prompt = (
+        "I read this section of China Desk's daily brief, which summarises "
+        f'Chinese-language news in English. The brief was headlined "{headline}". '
+        f'The section is "{heading}" and it said:\n\n{body}\n\n'
+        "Give me the background needed to understand this properly: who the "
+        "people and organisations are, what led up to it, what is disputed, "
+        "and how Chinese and Western coverage of it tend to differ."
+    )
+    c = _ask_url("https://claude.ai/new?q=", prompt)
+    g = _ask_url("https://chatgpt.com/?q=", prompt)
+    return (f'<p class="ask sectionask">Go deeper on this section: '
+            f'<a href="{c}" target="_blank" rel="noopener nofollow">Claude</a>'
+            f'<a href="{g}" target="_blank" rel="noopener nofollow">ChatGPT</a></p>')
+
+
+def _add_ask_links(clean_html: str) -> str:
+    """Append a per-section assistant handoff to the rendered brief.
+
+    Runs after sanitisation, deliberately: the markup added here is ours and
+    must not be filtered by the allowlist, while everything it wraps has already
+    been through it. The section text is stripped of tags before going into the
+    prompt, so nothing the model wrote can smuggle markup into the URL.
+
+    Per section rather than per sentence because selecting a sentence needs
+    client-side JS, and the page's CSP denies script outright.
+    """
+    parts = _H2_SPLIT.split(clean_html)
+    if len(parts) < 2:
+        return clean_html
+    headline = _TAGS_RE.sub("", parts[0].split("</h1>")[0]).strip() or "China Desk"
+    out = [parts[0]]
+    for part in parts[1:]:
+        heading = _TAGS_RE.sub("", part.split("</h2>")[0]).strip()
+        body = _TAGS_RE.sub(" ", part.split("</h2>", 1)[-1])
+        out.append(part + _ask_block(heading, body, headline))
+    return "".join(out)
 
 
 def humanize_age(published_iso: str, now: datetime) -> str:

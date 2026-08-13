@@ -187,3 +187,9 @@ footer{margin-top:1.3rem;font-size:.8rem;color:var(--ink-3);line-height:1.6;
   .cols{grid-template-columns:1fr;gap:1.8rem}
   .doc{max-width:none}
 }
+
+/* Per-section handoff to whichever assistant the reader already pays for.
+   Quiet by default: this is an escape hatch for the reader who wants more, not
+   a call to action competing with the prose above it. */
+.doc .sectionask{font-size:.76rem;color:var(--ink-3);margin:-.2rem 0 1.4rem}
+.doc .sectionask a{color:var(--seal);margin-left:.5rem}
