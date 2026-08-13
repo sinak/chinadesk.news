@@ -1,6 +1,15 @@
 /*
   X-Content-Type-Options: nosniff
   Referrer-Policy: no-referrer-when-downgrade
+  # Defence in depth behind brief_to_html()'s sanitiser. The page loads one
+  # inline <style> and nothing else — no scripts, images, fonts or frames — so
+  # everything else can be denied outright. NOTE: this forbids inline <script>.
+  # CLAUDE.md permits inline JS when it earns its place; adding any will require
+  # a 'sha256-...' hash here, and the page will silently not run it until then.
+  Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; img-src data: https:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+
+/brief/*
+  Cache-Control: public, max-age=300, must-revalidate
 
 /data/*
   Cache-Control: public, max-age=60, must-revalidate

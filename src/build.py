@@ -14,6 +14,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import markdown
+import nh3
 import yaml
 from jinja2 import Environment, FileSystemLoader
 
@@ -24,24 +25,42 @@ ROOT = Path(__file__).resolve().parent.parent
 SITE_NAME = "China Desk"
 
 
+# What the brief is allowed to render. Everything else is stripped. The brief
+# needs prose, emphasis, links, lists and headings — nothing that loads a
+# resource, carries script, or restyles the page.
+_BRIEF_TAGS = {"p", "strong", "em", "b", "i", "a", "ul", "ol", "li",
+               "h1", "h2", "h3", "h4", "blockquote", "code", "br", "hr"}
+_BRIEF_ATTRS = {"a": {"href", "title"}}
+_BRIEF_SCHEMES = {"http", "https", "mailto"}
+
+
 def brief_to_html(md_text: str) -> str:
-    """Markdown -> HTML for the daily brief, with tag injection defused first.
+    """Markdown -> sanitised HTML for the daily brief.
 
-    The template renders this with `|safe`, which is the one place on the page
-    that opts out of autoescaping — it has to, or the brief's own bold, links
-    and lists would render as literal angle brackets. That makes this function
-    the trust boundary.
+    The template renders this with `|safe`, the one place on the page that opts
+    out of autoescaping — it has to, or the brief's own bold, links and lists
+    would render as literal markup. That makes this function the trust boundary,
+    and the brief is model prose written from scraped pages, so it is prose an
+    attacker can influence.
 
-    Python-Markdown passes raw HTML through untouched by design, and the brief
-    is model prose written from scraped Chinese articles, so a crafted source
-    page is a plausible route to `<script>` on the site. Neutralising `<` and
-    `>` before conversion means Markdown can still build tags from its own
-    syntax (`**`, `[](...)`, `-`), while any literal tag in the model's output
-    renders as visible text instead of markup. `&` is deliberately left alone:
-    escaping it here would double-encode query strings in link URLs.
+    Escaping `<` and `>` before conversion is NOT sufficient, which is how this
+    was first written and it was wrong. Markdown manufactures active content
+    from its own syntax, with no angle bracket anywhere in the source:
+
+        [click](javascript:alert(1))        -> href="javascript:..."
+        [x](https://a){: onclick="..." }    -> onclick=, via attr_list in `extra`
+
+    Both were reproduced against the earlier implementation. So: escape first
+    (kills literal `<script>` in the source), render with the smallest useful
+    extension set — `extra` is dropped precisely because it carries attr_list —
+    then sanitise the output against an allowlist of tags, attributes and URL
+    schemes. `&` is left unescaped so query strings in link URLs survive; the
+    sanitiser is what catches entity-obfuscated schemes like `jav&#x61;script:`.
     """
     escaped = md_text.replace("<", "&lt;").replace(">", "&gt;")
-    return markdown.markdown(escaped, extensions=["extra"])
+    html = markdown.markdown(escaped, extensions=["sane_lists"])
+    return nh3.clean(html, tags=_BRIEF_TAGS, attributes=_BRIEF_ATTRS,
+                     url_schemes=_BRIEF_SCHEMES, link_rel="noopener nofollow")
 
 
 def humanize_age(published_iso: str, now: datetime) -> str:
@@ -218,7 +237,7 @@ def main() -> int:
     versus = " or ".join(us_names) if us_names else "US tech media"
     site_description = (
         f"{len(clusters)} stories from {live_feeds} Chinese and US sources · "
-        f"{only_cn} not picked up by {versus} · rebuilt hourly"
+        f"{only_cn} not picked up by {versus} · rebuilt every four hours"
     )
 
     for it in items:
@@ -227,12 +246,26 @@ def main() -> int:
         except ValueError:
             it.pub_rfc822 = format_datetime(now)
 
-    # The daily brief. Generated at most once per UTC day and read back from the
-    # published site on every later build, so the four-hourly cadence costs one
-    # model call a day rather than six. Gated on its own: the story list does not
-    # depend on it, so a brief that fails its checks is dropped and the site
-    # publishes without it rather than not publishing at all. That is a
-    # degradation, so it is reported loudly — never silently.
+    # Gate on the story data BEFORE spending on the brief. The brief costs about
+    # $2; a failed ranking call or a collapsed source set means the page cannot
+    # publish no matter how good the brief is, so paying for one first buys
+    # nothing. These same checks run again after rendering, against the full
+    # page — this pass is purely to fail cheap.
+    pre = checks.run(items, clusters, ledger, rank_status)
+    pre_bad = [r for r in pre if not r.ok and r.blocking]
+    if pre_bad and not args.skip_checks:
+        names = ", ".join(r.name for r in pre_bad)
+        print(f"[build] BLOCKED before the brief ({names}) — refusing to "
+              f"publish, and not paying for a brief that cannot ship",
+              file=sys.stderr)
+        print(f"[build] preflight (data):\n{checks.report(pre)[1]}")
+        return 1
+
+    # The daily brief. Generated at most once per China day and read back from
+    # the published site on every later build, so the four-hourly cadence costs
+    # one model call a day rather than six. Gated on its own: the story list does
+    # not depend on it, so a brief that fails its checks is dropped and the site
+    # publishes without it rather than not publishing at all.
     brief_html = None
     if config.get("brief", {}).get("enabled", True):
         brief_md, brief_status = brief.ensure(
