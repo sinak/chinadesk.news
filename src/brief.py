@@ -145,6 +145,19 @@ bolded fragments alone should come away knowing the day.
   V4-Pro", not "the release"; "Zhu Rongji's death", not "the news". Once per
   section, worked into the sentence, is enough — you are re-anchoring, not
   reintroducing, and repeating it every paragraph reads like a machine.
+- Never allude to an event you have not described. This is the same rule as
+  glossing a person, applied to things that happened. "Tang Jie's promise to
+  Musk" tells a reader who has not followed the story nothing: not who Tang Jie
+  is, not what he promised, not when, not why Musk is in the sentence. Either
+  state it — "Zhipu chief executive Tang Jie, who said in July that the weights
+  would be opened" — or cut the reference entirely. A compressed allusion is
+  worse than silence, because it announces there is something to know and then
+  withholds it.
+- Do not stack possessives. "QbitAI's framing of Tang Jie's promise to Musk"
+  makes the reader resolve three references inside one noun phrase before the
+  sentence even reaches its verb. Two is the limit, and one is better; break
+  the rest into their own sentences. This gets worse in the coverage-contrast
+  writing, where outlet, person and event all want to be in the same clause.
 - Em dashes for asides. A one-sentence paragraph for emphasis is good.
 - A tight bulleted run is fine where the material genuinely is a list — a spec
   sheet, three funding rounds, four provinces doing the same thing. Give each
@@ -190,9 +203,9 @@ HOW TO WRITE IT
   units the same way — mu and hectares mean nothing to this reader; acres and
   square miles do.
 - Name companies, people, agencies and numbers. Specificity is the product.
-- Every Chinese figure gets a short gloss on first mention — who they are and
-  why their involvement matters here. A clause or a short sentence, not a
-  biography: "Liang Wenfeng, the former hedge-fund manager who founded
+- Every Chinese figure gets a short gloss the first time they appear — who they
+  are and why their involvement matters here. A clause or a short sentence, not
+  a biography: "Liang Wenfeng, the former hedge-fund manager who founded
   DeepSeek", "Zhu Rongji, premier from 1998 to 2003 and the architect of the
   state-enterprise layoffs". Assume the reader follows US technology closely
   and China not at all. Xi Jinping is the one exception; he needs no
@@ -201,6 +214,13 @@ HOW TO WRITE IT
   position they are known for — so the reader can weigh the argument. Do not
   invent a credential: if you are not confident who someone is, say what the
   source says about them and no more.
+
+  This holds however briefly the name appears. A passing reference is where it
+  matters most: a name dropped once, mid-clause, with no gloss is a name the
+  reader can only skip. If a figure is worth naming they are worth placing in
+  six words, and if they are not worth six words, use their role instead of
+  their name — "Zhipu's chief executive" reads perfectly well and asks nothing
+  of the reader.
 - Attribute forum and market chatter as sentiment, never as fact.
 - Claims about what happened must come from the provided text. Background you
   are confident about may come from your own knowledge, phrased as background.
