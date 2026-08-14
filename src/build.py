@@ -67,10 +67,19 @@ def brief_to_html(md_text: str) -> str:
 _TAGS_RE = re.compile(r"<[^>]+>")
 _H2_SPLIT = re.compile(r"(?=<h2>)")
 _SENT_SPLIT = re.compile(r"(?<=[.!?])\s+")
-# Percent-encoding inflates the prompt by roughly 40%, and the safe ceiling for
-# a URL is 2,048 characters — some servers still reject longer. 850 characters
-# of section text leaves room for the framing around it.
-_ASK_CHARS = 850
+# Sized to carry a whole section, because a truncated one is the thing the
+# handoff is meant to avoid: the assistant is asked to explain a passage it can
+# only half see. Measured across real briefs, sections run 750 to 3,600
+# characters, so 4,000 takes every observed section intact and the
+# sentence-boundary trim below only fires on an outlier.
+#
+# That yields URLs around 6,000 characters. The 2,048 figure this was first
+# sized against is an old IIS/proxy limit, not a browser one — Chrome allows
+# ~32k and Firefox more. Direct probing of claude.ai and chatgpt.com was
+# inconclusive because both answer curl with 403 bot detection at every length,
+# including 16,000 characters, which at least means neither edge rejected the
+# length before the application saw it.
+_ASK_CHARS = 4000
 
 
 def _trim_to_sentence(text: str, limit: int) -> str:
