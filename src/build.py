@@ -43,22 +43,26 @@ def brief_to_html(md_text: str) -> str:
     and the brief is model prose written from scraped pages, so it is prose an
     attacker can influence.
 
-    Escaping `<` and `>` before conversion is NOT sufficient, which is how this
-    was first written and it was wrong. Markdown manufactures active content
-    from its own syntax, with no angle bracket anywhere in the source:
+    Markdown manufactures active content from its own syntax, with no angle
+    bracket anywhere in the source, so escaping tags is not the defence:
 
         [click](javascript:alert(1))        -> href="javascript:..."
         [x](https://a){: onclick="..." }    -> onclick=, via attr_list in `extra`
 
-    Both were reproduced against the earlier implementation. So: escape first
-    (kills literal `<script>` in the source), render with the smallest useful
-    extension set — `extra` is dropped precisely because it carries attr_list —
-    then sanitise the output against an allowlist of tags, attributes and URL
-    schemes. `&` is left unescaped so query strings in link URLs survive; the
-    sanitiser is what catches entity-obfuscated schemes like `jav&#x61;script:`.
+    Both were reproduced against an earlier version of this function. The
+    defence is: render with the smallest useful extension set — `extra` is
+    dropped precisely because it carries attr_list — then sanitise the output
+    against an allowlist of tags, attributes and URL schemes.
+
+    An earlier version also escaped `<` and `>` before converting, which was
+    both unnecessary and harmful. Unnecessary because nh3 removes `<script>`
+    along with its contents and strips every tag outside the allowlist anyway.
+    Harmful because escaping turns any tag the model emits into visible text:
+    the search plugin's citation markup leaked into a published brief and
+    readers saw a literal `<cite index="4-4,4-5">` in the middle of a sentence.
+    Sanitising instead of escaping drops the tag and keeps the sentence.
     """
-    escaped = md_text.replace("<", "&lt;").replace(">", "&gt;")
-    html = markdown.markdown(escaped, extensions=["sane_lists"])
+    html = markdown.markdown(md_text, extensions=["sane_lists"])
     clean = nh3.clean(html, tags=_BRIEF_TAGS, attributes=_BRIEF_ATTRS,
                       url_schemes=_BRIEF_SCHEMES, link_rel="noopener nofollow")
     return _add_ask_links(clean)
@@ -434,10 +438,22 @@ def main() -> int:
         if day == today or not rows:
             continue
         day_clusters = decorate(clusters_from_rows(rows), labels)
+        # A past day gets its own brief, not today's. These are already on disk
+        # — history() pulled them forward into dist/brief/ so they stay
+        # published — so this costs a file read, not a model call. The brief is
+        # the part of a day worth going back for; a day page without it is just
+        # a list of links whose stories have already rolled off.
+        day_brief = brief.load_brief(out, site_url_early, day)
+        day_html = None
+        if day_brief:
+            dres = checks.check_brief(day_brief)
+            if not [r for r in dres if not r.ok and r.blocking]:
+                day_html = brief_to_html(day_brief)
         (day_dir / f"{day}.html").write_text(
             env.get_template("index.html.j2").render(
                 ledger=[], day_tabs=archive.tabs(store, now, current=day),
                 archive_day=day, ok_feeds=0, all_feeds=0,
+                brief=day_html,
                 built_iso=now.strftime("%Y-%m-%dT%H:%M:%SZ"),
                 built_human=datetime.strptime(day, "%Y-%m-%d").strftime("%d %b %Y"),
                 **{**shared, "clusters": day_clusters, "total": len(day_clusters)},

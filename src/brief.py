@@ -233,6 +233,12 @@ HOW TO WRITE IT
   means in English words ("a name taken from the linguistics term pragmatics")
   and never show the characters. A single character on the page fails the
   build.
+- Markdown only. No HTML tags of any kind, and in particular none of the
+  citation markup the search tool uses internally: no <cite>, no index
+  attributes, no reference brackets pointing at result numbers. A brief shipped
+  with "<cite index="4-4,4-5">" sitting in the middle of a sentence, which is
+  what the reader saw. Cite a source the way the rest of the brief does, with
+  an inline markdown link, or not at all.
 - Link out inline as markdown. Every paragraph resting on a specific story
   carries that story's link — a reader who wants to check you should never have
   to go looking. Where a claim came from a search rather than the feed, link the
