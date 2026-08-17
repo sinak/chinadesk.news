@@ -30,6 +30,13 @@ MIN_HTML_BYTES = 4000    # catches a template that rendered to nothing
 MAX_FLAGGED_TITLES = 2   # a couple of visible [UNTRANSLATED] tags is tolerable
 MAX_THIN_ITEMS = 3       # a few short dropdowns is variance; twenty is a broken ranker
 BRIEF_MIN_WORDS = 900    # half the target; below this the model bailed early
+# Calibrated on six published briefs rather than on the prompt's stated ceiling.
+# Under the current rules they land at 1,400-1,565 words, clustered tightly, so
+# a check at the prompt's 1,500 would have failed three of the four most recent
+# — and a check that fires on normal operation is one everybody learns to
+# ignore. 1,900 passes every observed brief with room for a genuinely busy day
+# and still catches a runaway: the last pre-rules brief ran 2,232.
+BRIEF_MAX_WORDS = 1900
 BRIEF_MIN_LINKS = 12     # a brief nobody can check is not worth publishing
 
 
@@ -41,7 +48,7 @@ class Result:
     detail: str = ""
 
 
-def check_brief(brief: str) -> list[Result]:
+def check_brief(brief: str, generated: bool = True) -> list[Result]:
     """Gate the daily brief on its own, separately from the page.
 
     Deliberately not part of `run()`. The brief is one component of the page and
@@ -62,6 +69,14 @@ def check_brief(brief: str) -> list[Result]:
     words = len(brief.split())
     add("brief_nonempty", words >= BRIEF_MIN_WORDS, True,
         f"{words} words (floor {BRIEF_MIN_WORDS})")
+    # Length is a generation-quality rule, not a correctness one, so it gates
+    # new output and not the archive. Tightening a ceiling should never reach
+    # back and delete briefs that were acceptable the day they were written —
+    # a page silently losing its brief because the house style moved is a worse
+    # outcome than a slightly long brief staying where it is.
+    if generated:
+        add("brief_not_bloated", words <= BRIEF_MAX_WORDS, True,
+            f"{words} words (ceiling {BRIEF_MAX_WORDS})")
 
     # Hard constraint #1 again, on text the page-level check never sees. Opus in
     # particular likes to gloss a company with its original Chinese name.

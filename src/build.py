@@ -437,7 +437,15 @@ def main() -> int:
     for day, rows in store.items():
         if day == today or not rows:
             continue
+        # Same cap as the front page. decorate() sorts by rank_score, so this
+        # is the set that day actually led with — which is the point of an
+        # archive page: what Tuesday looked like, not everything Tuesday
+        # touched. Uncapped these ran to 178 stories against a 1,400-word
+        # brief, a rail four times the length of the column beside it. The
+        # full day survives in data/<day>.json regardless.
         day_clusters = decorate(clusters_from_rows(rows), labels)
+        if cap:
+            day_clusters = day_clusters[:cap]
         # A past day gets its own brief, not today's. These are already on disk
         # — history() pulled them forward into dist/brief/ so they stay
         # published — so this costs a file read, not a model call. The brief is
@@ -446,7 +454,7 @@ def main() -> int:
         day_brief = brief.load_brief(out, site_url_early, day)
         day_html = None
         if day_brief:
-            dres = checks.check_brief(day_brief)
+            dres = checks.check_brief(day_brief, generated=False)
             if not [r for r in dres if not r.ok and r.blocking]:
                 day_html = brief_to_html(day_brief)
         (day_dir / f"{day}.html").write_text(
