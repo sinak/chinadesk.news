@@ -152,6 +152,30 @@ def _add_ask_links(clean_html: str) -> str:
     return "".join(out)
 
 
+def og_image(root: Path) -> dict | None:
+    """The unfurl image, with its real dimensions, or None if absent.
+
+    Dimensions come out of the PNG header rather than being asserted: a card
+    whose declared size disagrees with the file gets cropped or rejected by
+    some platforms, and hardcoding 1200x630 would be a guess about a file
+    somebody may replace later. Returning None when the file is missing keeps
+    the template from emitting a meta tag pointing at a 404 — an unfurl with a
+    broken image reads worse than one with no image, and platforms cache it.
+    """
+    f = root / "static" / "og.png"
+    if not f.exists():
+        return None
+    try:
+        head = f.read_bytes()[:24]
+        if head[:8] != b"\x89PNG\r\n\x1a\n" or head[12:16] != b"IHDR":
+            return None
+        w = int.from_bytes(head[16:20], "big")
+        h = int.from_bytes(head[20:24], "big")
+    except OSError:
+        return None
+    return {"path": "/static/og.png", "w": w, "h": h}
+
+
 def humanize_age(published_iso: str, now: datetime) -> str:
     try:
         then = datetime.fromisoformat(published_iso)
@@ -383,6 +407,7 @@ def main() -> int:
         lstrip_blocks=True,
     )
     shared = dict(
+        og=og_image(ROOT),
         site_name=site.get("title", SITE_NAME),
         tagline=site.get("tagline", "China tech & AI, in English"),
         site_url=site_url,
