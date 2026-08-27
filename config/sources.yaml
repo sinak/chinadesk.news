@@ -20,8 +20,9 @@ fx:
 
 # Hard ceiling on the front page. The ranker is told to be selective, but score
 # calibration drifts between runs, so the cap is what actually keeps the page
-# short. Cut stories are reported, never silently dropped. Day archive pages are
-# uncapped — catching up on a missed day is a different job from skimming today.
+# short. Cut stories are reported, never silently dropped. Day archive pages take
+# the same cap, so a past day shows what that day led with rather than every
+# item it touched; the full day stays in data/<day>.json.
 max_stories: 34
 
 # The daily brief. Generated once per UTC day and read back from the published
@@ -305,6 +306,80 @@ feeds:
       - 酷工作        # hiring board leaks into the tech tab
 
 # Sources with no usable feed. Scraped by src/scrape.py.
+  # --- added Aug 2026 from a reader's source list; the four of eighteen that
+  #     turned out to have working feeds. The rest either have no RSS (every
+  #     official government site, Caixin, The Paper, Jiqizhixin) or refuse
+  #     crawlers outright (PBoC, LatePost). See scrape: below.
+  - id: zhidx
+    name: Zhidx
+    url: https://www.zhidx.com/rss
+    lang: zh
+    tier: ai
+    nature: reporting
+    origin: cn
+    weight: 1.5
+    max_items: 10
+    # The pick of the four. AI, chips and hard tech, and alone among them the
+    # feed carries full article text — median 4,289 characters, so no
+    # fetch_body round-trip and no summarising from a headline.
+
+  - id: infoq
+    name: InfoQ China
+    url: https://www.infoq.cn/feed
+    lang: zh
+    tier: ai
+    nature: reporting
+    origin: cn
+    weight: 1.1
+    max_items: 8
+    fetch_body: true
+    # Developer and infrastructure angle on Chinese AI — model releases read as
+    # engineering rather than announcement. Skews to dev tooling, hence the
+    # lower weight: some of it is closer to a conference talk than to news.
+
+  - id: xinzhiyuan
+    name: New Wisdom
+    url: https://aiera.com.cn/feed
+    lang: zh
+    tier: ai
+    nature: reporting
+    origin: cn
+    weight: 0.9
+    max_items: 8
+    fetch_body: true
+    # Two caveats, both reflected in the weight. The headlines are written to
+    # be shouted — 突发, 疯了, 杀疯了 — so the ranker should read confidence here
+    # as a house style rather than as evidence. And much of the feed is Chinese
+    # coverage OF American AI, which china_focus will mark `none` and drop; the
+    # items that survive are the ones worth having, because how Beijing's tech
+    # press frames an OpenAI release is exactly the coverage-contrast material.
+    drop_title_keywords:
+      - 直播预告
+      - 报名
+      - 招聘
+
+  - id: tmtpost
+    name: TMTPost
+    url: https://www.tmtpost.com/feed
+    lang: zh
+    tier: tech
+    nature: reporting
+    origin: cn
+    weight: 0.9
+    max_items: 8
+    fetch_body: true
+    # The most mixed of the four: real technology and business reporting sits
+    # beside cosmetics brands, hospital policy and webinar promotion. 钛晨报 is
+    # its morning digest — the same wire-roundup format already filtered out of
+    # 36Kr and Jiemian, and the same reason: a digest is thirty headlines with
+    # no body, which summarises into nothing.
+    drop_title_keywords:
+      - 钛晨报
+      - 直播
+      - 前瞻
+      - 峰会
+      - 报名
+
 scrape:
   - id: tophub_ai
     name: TopHub AI
