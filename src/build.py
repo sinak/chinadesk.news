@@ -459,6 +459,7 @@ def main() -> int:
     day_dir = out / "d"
     day_dir.mkdir(parents=True, exist_ok=True)
     today = now.strftime("%Y-%m-%d")
+    current_brief_day = brief.brief_day(now)
     for day, rows in store.items():
         if day == today or not rows:
             continue
@@ -471,17 +472,27 @@ def main() -> int:
         day_clusters = decorate(clusters_from_rows(rows), labels)
         if cap:
             day_clusters = day_clusters[:cap]
-        # A past day gets its own brief, not today's. These are already on disk
-        # — history() pulled them forward into dist/brief/ so they stay
-        # published — so this costs a file read, not a model call. The brief is
-        # the part of a day worth going back for; a day page without it is just
-        # a list of links whose stories have already rolled off.
-        day_brief = brief.load_brief(out, site_url_early, day)
+        # A past day gets its own brief. These are already on disk — history()
+        # pulled them forward into dist/brief/ so they stay published — so this
+        # costs a file read, not a model call. The brief is the part of a day
+        # worth going back for; a day page without it is just a list of links
+        # whose stories have already rolled off.
+        #
+        # Except for the day whose brief is currently on the front page. The two
+        # surfaces count days differently: tabs and the story archive run on UTC
+        # dates, briefs on China dates twelve hours behind. So from midnight UTC
+        # until the next brief generates around 13:37, "Yesterday" and the front
+        # page resolve to the same file — about thirteen hours a day of the site
+        # showing one brief twice and looking broken. Skipping it here leaves the
+        # stories, and the brief reappears on this page once the front page has
+        # moved on to a newer one.
         day_html = None
-        if day_brief:
-            dres = checks.check_brief(day_brief, generated=False)
-            if not [r for r in dres if not r.ok and r.blocking]:
-                day_html = brief_to_html(day_brief)
+        if day != current_brief_day:
+            day_brief = brief.load_brief(out, site_url_early, day)
+            if day_brief:
+                dres = checks.check_brief(day_brief, generated=False)
+                if not [r for r in dres if not r.ok and r.blocking]:
+                    day_html = brief_to_html(day_brief)
         (day_dir / f"{day}.html").write_text(
             env.get_template("index.html.j2").render(
                 ledger=[], day_tabs=archive.tabs(store, now, current=day),
