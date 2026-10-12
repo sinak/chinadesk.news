@@ -35,11 +35,16 @@ sys.path.insert(0, str(ROOT))
 from src import fetch  # noqa: E402
 
 OUT = ROOT / "experiments" / "playbooks"   # local scratch for --once runs
-# Opus writes the better brief — it picks the story with the longest shadow and
-# argues rather than summarises. It is ~70x the price of Luna per run, which is
-# affordable only because the brief is generated once a day and read back from
-# the published site on the other five builds. See `ensure()`.
-MODEL = os.environ.get("BRIEF_MODEL", "anthropic/claude-opus-5")
+# Sonnet 5.5 at xhigh, chosen in an October 2026 trial against Opus 5 and Opus
+# 5.5 on identical input (same feed, same seven prior briefs). All three passed
+# the gate. Sonnet and Opus 5.5 both led on the story with the longest shadow
+# where Opus 5 led on the loudest one, and Sonnet found the fresher angle at
+# roughly half Opus 5.5's price: about $0.97 a brief. Most of that is input — the
+# feed, prior briefs and search results — so effort barely moves cost; `max` was
+# tried and abandoned because it ran past twice the xhigh time without finishing,
+# against a 30-minute request timeout. Affordable at all only because the brief
+# is generated once a day and read back on the other five builds. See `ensure()`.
+MODEL = os.environ.get("BRIEF_MODEL", "anthropic/claude-sonnet-5.5")
 EFFORT = os.environ.get("BRIEF_EFFORT", "xhigh")
 
 SYSTEM = """You write China Desk Playbook: one daily brief on what is actually

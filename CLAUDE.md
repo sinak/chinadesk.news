@@ -45,9 +45,9 @@ same thing is dropped outright (see `omit` in the ranking prompt).
     src/rank.py           one batched model call via OpenRouter: translate, summarize,
                           cluster, score (deterministic heuristic fallback, no API key)
     src/translate.py      rewrites zh links to the translate.goog proxy
-    src/brief.py          the daily brief: one long prose call (Opus 5 xhigh) that
-                          reads the whole feed plus its own recent briefs and
-                          argues rather than summarises. Generated once per UTC
+    src/brief.py          the daily brief: one long prose call (Sonnet 5.5 xhigh)
+                          that reads the whole feed plus its own recent briefs and
+                          argues rather than summarises. Generated once per China
                           day and read back from the published site thereafter.
     src/build.py          orchestrates, renders Jinja2, writes dist/
     templates/            index.html.j2 — all CSS inline, no JS, no build step
@@ -62,10 +62,12 @@ same thing is dropped outright (see `omit` in the ranking prompt).
 The front page is two columns: the brief on the left, the story river on the
 right. Three things about it are load-bearing.
 
-**It is generated once per UTC day, not once per build.** The site rebuilds every
-four hours; the brief costs roughly $2 a run on Opus. `brief.ensure()` looks for
-today's brief locally, then on the live site, and only calls the model if neither
-has it — so the day costs one call, not six. Publishing `dist/brief/<day>.md` is
+**It is generated once per China day, not once per build.** The day boundary is
+12:00 UTC (20:00 Beijing) — see `BRIEF_DAY_OFFSET_HOURS` for why it isn't midnight
+in either place. The site rebuilds every four hours; the brief costs roughly $1 a
+run on Sonnet 5.5. `brief.ensure()` looks for today's brief locally, then on the
+live site, and only calls the model if neither has it — so the day costs one
+call, not six. Publishing `dist/brief/<day>.md` is
 what makes the read-back work, exactly as `archive.py` does for the story store.
 Never make the brief regenerate per build without reworking the cost model.
 
@@ -76,10 +78,12 @@ drop is printed loudly; it must never become silent.
 
 **The brief is the one place on the page that opts out of autoescaping.** It has
 to, or its own bold and links would render as literal markup. `brief_to_html()`
-is therefore the trust boundary: it neutralises `<` and `>` before Markdown
-conversion, because Python-Markdown passes raw HTML through by design and the
-brief is model prose written from scraped pages. Do not replace it with a bare
-`markdown.markdown()` call.
+is therefore the trust boundary. It renders Markdown with a minimal extension set
+(not `extra`, which carries attr_list) and then sanitises the output with `nh3`
+against an allowlist of tags, attributes and URL schemes. Escaping `<` and `>`
+first is not a defence — Markdown builds `javascript:` hrefs from its own syntax —
+and was actively harmful: it turned the search tool's citation tags into visible
+text on the page. Never ship the model's Markdown without the sanitiser.
 
 Carrying history matters — a brief that cannot say "the tightening we flagged
 Tuesday" is just a longer front page. But carrying too *much* of it invites the

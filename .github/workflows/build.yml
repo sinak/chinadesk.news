@@ -38,7 +38,7 @@ jobs:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           # The brief runs once a UTC day; the other five builds read back the
           # published copy. Override either to retune without a code change.
-          BRIEF_MODEL: anthropic/claude-opus-5
+          BRIEF_MODEL: anthropic/claude-sonnet-5.5
           BRIEF_EFFORT: xhigh
         run: python -m src.build --out dist
 
