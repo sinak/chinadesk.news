@@ -1,0 +1,20 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "chinadesk-cron",
+  "main": "worker.js",
+  "compatibility_date": "2026-10-01",
+  // No public URL. The only way in is Cloudflare's own scheduler.
+  "workers_dev": false,
+  "preview_urls": false,
+  "triggers": {
+    // UTC, same slots the GitHub schedule used: 00:07, 04:07 ... 20:07.
+    // The brief's day boundary is 12:00 UTC, so the 12:07 run generates it.
+    "crons": ["7 */4 * * *"]
+  },
+  "vars": {
+    "REPO": "sinak/chinadesk.news",
+    "WORKFLOW": "build.yml",
+    "REF": "main"
+  },
+  "observability": { "enabled": true }
+}

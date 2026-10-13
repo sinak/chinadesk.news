@@ -1,8 +1,14 @@
 name: Build and deploy
 
+# The four-hourly trigger is moving to a Cloudflare Worker (cron/worker.js) that
+# calls workflow_dispatch on time. GitHub runs cron workflows best-effort, and for
+# this repo that meant 48% of slots never ran and the rest started a median 1h46m
+# late. The schedule below stays only as a backstop until the Worker is confirmed
+# firing — Cloudflare had an open cron-activation incident when it was deployed.
+# Once it is, delete `schedule:`: leaving both means a second, late build per slot.
 on:
   schedule:
-    - cron: "7 */4 * * *"    # every 4 hours, at :07 past
+    - cron: "7 */4 * * *"
   workflow_dispatch:
   push:
     branches: [main]
@@ -10,7 +16,7 @@ on:
 permissions:
   contents: read
 
-# A build takes ~3 minutes and the cron fires hourly, so overlap is unlikely —
+# A build takes ~3 minutes and fires every four hours, so overlap is unlikely —
 # but a hung model call could run to the 1800s timeout, and two builds writing
 # the archive at once would race. Queue instead of cancelling: a cancelled run
 # publishes nothing, which is the one outcome worse than a late one.

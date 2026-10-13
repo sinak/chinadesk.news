@@ -1,7 +1,7 @@
 # China Desk
 
 A Memeorandum-style static aggregator for Chinese tech and AI news, in English,
-rebuilt hourly.
+rebuilt every four hours.
 
 ## What this is
 
@@ -53,6 +53,14 @@ same thing is dropped outright (see `omit` in the ranking prompt).
     templates/            index.html.j2 — all CSS inline, no JS, no build step
     src/archive.py        rolling 7-day store; reads back the last published day
                           files so history survives CI's clean checkout
+    cron/                 Cloudflare Worker that triggers the build every four
+                          hours (7 */4 UTC) via GitHub's workflow_dispatch API.
+                          GitHub's own cron was too unreliable — about half of
+                          slots never ran. Needs the GITHUB_TOKEN Worker secret
+                          (fine-grained, Actions read/write on this repo only).
+                          Deploy with `cd cron && wrangler deploy`. Until it is
+                          confirmed firing, build.yml keeps its own schedule as
+                          a backstop — see the comment there.
     dist/                 index.html, feed.xml, d/YYYY-MM-DD.html (day pages),
                           data/YYYY-MM-DD.json (the store), brief/YYYY-MM-DD.md,
                           latest.json
@@ -118,7 +126,7 @@ build step for the frontend, that is the line — stop and reconsider.
 - **36Kr article pages block plain curl** with a bot interstitial, though the RSS feed
   is fine. Article-level fetches need full browser headers.
 - Substack feeds (ChinAI, ChinaTalk, Pekingnology, Ginger River, Sinocism) serve
-  **full article text**, not truncated stubs. ChinAI is weekly — most hourly runs will
+  **full article text**, not truncated stubs. ChinAI is weekly — most four-hourly runs will
   legitimately find nothing new from it.
 - Feeds carry 20–30 items each, mostly old. Time-windowing is what makes the page
   current; without it the site fills with month-old links.
