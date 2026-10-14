@@ -58,9 +58,7 @@ same thing is dropped outright (see `omit` in the ranking prompt).
                           GitHub's own cron was too unreliable — about half of
                           slots never ran. Needs the GITHUB_TOKEN Worker secret
                           (fine-grained, Actions read/write on this repo only).
-                          Deploy with `cd cron && wrangler deploy`. Until it is
-                          confirmed firing, build.yml keeps its own schedule as
-                          a backstop — see the comment there.
+                          Deploy with `cd cron && wrangler deploy`.
     dist/                 index.html, feed.xml, d/YYYY-MM-DD.html (day pages),
                           data/YYYY-MM-DD.json (the store), brief/YYYY-MM-DD.md,
                           latest.json
