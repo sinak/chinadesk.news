@@ -100,7 +100,7 @@ ones are reduced to headline plus threads.
 
 Run it: `OPENROUTER_API_KEY=... python -m src.build --out dist`
 Options: `--window 26` (hours of history), `--config path`
-Model:   `CHINADESK_MODEL` (default `openai/gpt-5.6-luna`),
+Model:   `CHINADESK_MODEL` (default `openai/gpt-6-luna`),
          `CHINADESK_EFFORT` (default `high`; low/medium/high/xhigh/max)
 
 **Server-side by default; inline progressive enhancement when a feature genuinely

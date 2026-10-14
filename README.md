@@ -73,7 +73,7 @@ per-source weights, filters and caps, section labels, and a documented list of h
 that must never be fetched.
 
 Model and effort are environment variables: `CHINADESK_MODEL` (default
-`openai/gpt-5.6-luna`) and `CHINADESK_EFFORT` (default `high`).
+`openai/gpt-6-luna`) and `CHINADESK_EFFORT` (default `high`).
 
 See `CLAUDE.md` for architecture, editorial rules, and the source quirks worth
 knowing before changing anything.

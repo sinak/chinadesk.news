@@ -17,7 +17,13 @@ import os
 import re
 import sys
 
-MODEL = os.environ.get("CHINADESK_MODEL", "openai/gpt-5.6-luna")
+# GPT-6 Luna, chosen over GPT-5.6 Luna in an October 2026 trial: five runs each
+# on the same frozen 106 items. Coverage was equivalent — omissions, culture and
+# policy share, clustering — but 5.6 put a median of 8 items in `lead` against the
+# prompt's cap of 5, tripping lead_restraint on nearly every build, where 6 put 2.
+# Also less than half the price per call. Known risk: about one run in five, 6
+# over-omitted (51 dropped against a usual ~35), narrowing that cycle's mix.
+MODEL = os.environ.get("CHINADESK_MODEL", "openai/gpt-6-luna")
 EFFORT = os.environ.get("CHINADESK_EFFORT", "high")
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
